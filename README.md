@@ -1,5 +1,7 @@
 # Pi Sandboxed Configuration
 
+**This is mostly written by LLM agents. Hopefully it will give me a sane environment to do agentic coding. I don't promise that it is reasonable. As my configuration evolves, hopefully the writing style will also improve. Please don't take things in this repo as representative of my usual writing or coding style...**
+
 A secure, sandboxed, and easily replicable configuration for the [`pi-coding-agent`](https://github.com/earendil-works/pi-mono/tree/main/packages/coding-agent). Designed to be kept in a public GitHub repository, this setup allows convenient, instant deployment on fresh x86/ARM Linux VMs/VPS instances as well as smooth sync-backs of custom extensions/skills to an ARM Mac laptop.
 
 ## Design Highlights
