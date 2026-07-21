@@ -1,0 +1,283 @@
+#!/usr/bin/env python3
+import os
+import sys
+import json
+import argparse
+import subprocess
+import shutil
+from pathlib import Path
+
+# Standard locations
+CONFIG_DIR = Path.home() / ".config" / "pi-launcher"
+CONFIG_FILE = CONFIG_DIR / "config.json"
+ENV_FILE = CONFIG_DIR / ".env"
+
+
+def load_config():
+    if not CONFIG_FILE.exists():
+        print(
+            f"Error: Launcher configuration not found at {CONFIG_FILE}.",
+            file=sys.stderr,
+        )
+        print(
+            "Please run 'just install' from the pi-sandboxed-config directory to set it up.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    try:
+        with open(CONFIG_FILE, "r") as fd_config:
+            return json.load(fd_config)
+    except Exception as err:
+        print(f"Error reading configuration: {err}", file=sys.stderr)
+        sys.exit(1)
+
+
+def parse_env_file():
+    if not ENV_FILE.exists():
+        return {}
+
+    def _parse_line(line):
+        key, val = line.split("=", 1)
+        return key.strip(), val.strip()
+
+    with ENV_FILE.open("r") as fd:
+        return dict(
+            _parse_line(line)
+            for line in fd
+            if "=" in line and not line.strip().startswith("#")
+        )
+
+
+def ensure_git_worktree(repo_path, project_dir):
+    project_path = Path(project_dir).resolve()
+
+    # Create directory if it doesn't exist
+    if not project_path.exists():
+        print(f"Creating project directory: {project_path}")
+        project_path.mkdir(parents=True)
+
+    # Check if the directory is already a git worktree or repo
+    git_indicator = project_path / ".git"
+    if git_indicator.exists():
+        print(f"Found existing Git workspace at {project_path}")
+        return
+
+    # If directory exists but is not empty and not a git repo, raise warning
+    if any(project_path.iterdir()):
+        print(
+            f"Warning: Directory {project_path} is not empty and not a Git worktree. Skipping worktree creation.",
+            file=sys.stderr,
+        )
+        return
+
+    # Create worktree using Git
+    print(f"Checking out a new Git worktree at {project_path}...")
+    try:
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo_path),
+                "worktree",
+                "add",
+                "--detach",
+                str(project_path),
+                "HEAD",
+            ],
+            check=True,
+        )
+        print("Successfully created Git worktree!")
+    except subprocess.CalledProcessError as err:
+        print(f"Error creating Git worktree: {err}", file=sys.stderr)
+        sys.exit(1)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        usage="pi-launch [options] [-- pi_options_and_args]",
+        description="Launch pi-coding-agent inside a secure Podman sandbox.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Usage examples:
+  pi-launch                               # Launches in current directory
+  pi-launch -r                            # Resumes last session in current directory
+  pi-launch -p ~/projects/my-analysis     # Launches in specific directory
+  pi-launch -p ~/projects/my-analysis -r  # Resumes in specific directory
+  pi-launch -i /path/to/readonly/data     # Launches mounting a read-only inspect folder
+  pi-launch -- --offline                  # Forwards options after -- directly to pi
+  pi-launch -i /data1 -i /data2           # Launches mounting multiple inspect folders
+        """,
+    )
+
+    parser.add_argument(
+        "-p",
+        "--project-dir",
+        default=".",
+        help="Path to the writeable project workspace on the host. Defaults to current directory. Will be created as a Git worktree if not present.",
+    )
+
+    parser.add_argument(
+        "-c",
+        "--gcp-creds",
+        help="Path to the Google Vertex service account key (.json) file. Defaults to value in global configuration.",
+    )
+
+    parser.add_argument(
+        "-r",
+        "--resume",
+        action="store_true",
+        help="Resume a previous Pi session inside this workspace.",
+    )
+
+    parser.add_argument(
+        "-i",
+        "--inspect",
+        action="append",
+        default=[],
+        help="Paths to read-only directories on the host to mount under /inspect/ inside the sandbox (can be specified multiple times).",
+    )
+
+    # Pre-process arguments to separate launcher options from extra Pi options
+    # strictly after a mandatory '--' separator.
+    raw_args = sys.argv[1:]
+    if "--" in raw_args:
+        idx = raw_args.index("--")
+        launcher_args, pi_forward_args = raw_args[:idx], raw_args[idx + 1 :]
+    else:
+        launcher_args, pi_forward_args = raw_args, []
+
+    # Parse only launcher_args; unrecognized options will trigger a standard error
+    args = parser.parse_args(launcher_args)
+
+    # Verify Podman is installed
+    if not shutil.which("podman"):
+        print(
+            "Error: 'podman' executable not found. This launcher requires Podman to run.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # Load launcher configurations
+    config = load_config()
+    repo_path = Path(config["repo_path"])
+
+    # Resolve GCP Credentials cleanly with chained fallback
+    gcp_creds_path = (
+        args.gcp_creds
+        or config.get("default_credentials_json")
+        or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    )
+
+    if not gcp_creds_path:
+        print(
+            "Error: Google Application Credentials (.json) path must be specified.",
+            file=sys.stderr,
+        )
+        print(
+            "Use the -c/--gcp-creds flag, set GOOGLE_APPLICATION_CREDENTIALS, or configure it in config.json.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    gcp_creds_path = Path(gcp_creds_path).resolve()
+    if not gcp_creds_path.exists():
+        print(
+            f"Error: Google credentials file not found at {gcp_creds_path}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # Ensure project workspace has a git worktree of the config
+    ensure_git_worktree(repo_path, args.project_dir)
+    project_path = Path(args.project_dir).resolve()
+
+    # Read environment variables from global config .env file
+    env_vars = parse_env_file()
+
+    # Build container execution command
+    container_name = f"pi-{project_path.name}"
+
+    # Base Podman run structure
+    podman_cmd = [
+        "podman",
+        "run",
+        "--rm",
+        "-it",
+        "--name",
+        container_name,
+        # Map host user to container UID 1000 (pi) for perfect permission parity
+        "--userns=keep-id:uid=1000,gid=1000",
+        # In-memory transient directories
+        "--tmpfs",
+        "/tmp",
+        "--tmpfs",
+        "/home/pi",
+        # Writeable workspace directory (rw, SELinux label enabled)
+        "-v",
+        f"{project_path}:/workspace:rw,Z",
+        # Google credential JSON key mounted read-only
+        "-v",
+        f"{gcp_creds_path}:/secrets/gcp-credentials.json:ro,Z",
+        "-e",
+        "GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-credentials.json",
+    ]
+
+    # Mount inspect (read-only) directories if provided under /inspect/<basename>
+    mounted_names = set()
+    for inspect_dir in args.inspect:
+        inspect_path = Path(inspect_dir).resolve()
+        if not inspect_path.exists():
+            print(
+                f"Error: Inspect directory does not exist: {inspect_path}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        basename = inspect_path.name
+        target_name = basename
+        counter = 1
+        while target_name in mounted_names:
+            target_name = f"{basename}_{counter}"
+            counter += 1
+        mounted_names.add(target_name)
+
+        podman_cmd += ["-v", f"{inspect_path}:/inspect/{target_name}:ro,Z"]
+
+    # Inject parsed environment variables
+    for key, val in env_vars.items():
+        podman_cmd += ["-e", f"{key}={val}"]
+
+    # Append image name
+    podman_cmd += ["pi-sandbox"]
+
+    # Append pi command arguments
+    # Automatically add '--approve' so pi trusts our project workspace directory (/workspace) on boot
+    podman_cmd += ["--approve"]
+
+    if args.resume:
+        podman_cmd += ["-r"]
+
+    if pi_forward_args:
+        podman_cmd += pi_forward_args
+
+    print("\n" + "=" * 60)
+    print(f"Launching sandboxed Pi container: '{container_name}'")
+    print(f"Workspace: {project_path}")
+    print(
+        f"Run 'just root {container_name}' in another terminal for root shell access."
+    )
+    print("=" * 60 + "\n")
+
+    try:
+        # Execute Podman running in foreground
+        subprocess.run(podman_cmd, check=True)
+    except subprocess.CalledProcessError as err:
+        # Silent ignore of Ctrl+C exits or clean exits
+        sys.exit(err.returncode)
+    except KeyboardInterrupt:
+        print("\nSession exited.")
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

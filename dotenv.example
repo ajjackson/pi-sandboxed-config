@@ -1,0 +1,14 @@
+# Template for Google Vertex AI credentials and configuration
+# Copy this to ~/.config/pi-launcher/.env and fill in your details
+
+# Your Google Cloud Project ID
+GOOGLE_CLOUD_PROJECT=your-gcp-project-id
+
+# Your preferred Google Cloud region/location (e.g., us-central1)
+GOOGLE_CLOUD_LOCATION=us-central1
+
+# Default model provider to use with Pi
+DEFAULT_PROVIDER=google-vertex
+
+# Default model ID to use with Pi
+DEFAULT_MODEL=gemini-2.5-pro
