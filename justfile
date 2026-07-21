@@ -1,5 +1,9 @@
 # justfile for pi-sandboxed-config
 
+# List all available tasks (default when running 'just' with no arguments)
+default:
+    @just --list
+
 # Build the Podman container image
 build:
     podman build -t pi-sandbox -f Containerfile .
@@ -38,12 +42,7 @@ install default_credentials_path="":
     fi
     
     # Write global configuration file config.json
-    cat <<EOF > "$CONFIG_DIR/config.json"
-{
-  "repo_path": "$REPO_PATH",
-  "default_credentials_json": "$GCP_PATH"
-}
-EOF
+    printf '{\n  "repo_path": "%s",\n  "default_credentials_json": "%s"\n}\n' "$REPO_PATH" "$GCP_PATH" > "$CONFIG_DIR/config.json"
     echo "Wrote configuration to $CONFIG_DIR/config.json"
     
     # Copy template environment variable file if it doesn't exist

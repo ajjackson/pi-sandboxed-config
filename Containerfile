@@ -15,6 +15,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
  && rm -rf /var/lib/apt/lists/*
 
+# Delete pre-existing 'node' user with UID 1000 to avoid conflicts
+RUN userdel -r node
+
 # Create a non-root user 'pi' with standard UID 1000
 RUN useradd -u 1000 -m -s /bin/bash pi
 
