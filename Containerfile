@@ -1,10 +1,15 @@
+# Reference the official helper images as build stages
+# This forces Podman to automatically resolve and pull them on fresh systems
+FROM ghcr.io/astral-sh/uv:latest AS uv_source
+FROM ghcr.io/prefix-dev/pixi:latest AS pixi_source
+
 FROM node:24-bookworm-slim
 
-# Copy uv from the official uv image
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+# Copy uv from our pulled build stage
+COPY --from=uv_source /uv /uvx /usr/local/bin/
 
-# Copy pixi from the official pixi image
-COPY --from=ghcr.io/prefix-dev/pixi:latest /usr/local/bin/pixi /usr/local/bin/pixi
+# Copy pixi from our pulled build stage
+COPY --from=pixi_source /usr/local/bin/pixi /usr/local/bin/pixi
 
 # Install system dependencies (including ripgrep, fd, jq, and build essentials)
 RUN apt-get update && apt-get install -y --no-install-recommends \
