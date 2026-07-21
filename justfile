@@ -41,9 +41,13 @@ install default_credentials_path="":
         echo "Resolved GCP credentials file path: $GCP_PATH"
     fi
     
-    # Write global configuration file config.json
-    printf '{\n  "repo_path": "%s",\n  "default_credentials_json": "%s"\n}\n' "$REPO_PATH" "$GCP_PATH" > "$CONFIG_DIR/config.json"
-    echo "Wrote configuration to $CONFIG_DIR/config.json"
+    # Write global configuration file config.json if it doesn't exist
+    if [ ! -f "$CONFIG_DIR/config.json" ]; then
+        printf '{\n  "repo_path": "%s",\n  "default_credentials_json": "%s"\n}\n' "$REPO_PATH" "$GCP_PATH" > "$CONFIG_DIR/config.json"
+        echo "Created global configuration: $CONFIG_DIR/config.json"
+    else
+        echo "Global configuration already exists, skipping: $CONFIG_DIR/config.json"
+    fi
     
     # Copy template environment variable file if it doesn't exist
     if [ ! -f "$CONFIG_DIR/.env" ]; then
