@@ -6,13 +6,17 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 # Copy pixi from the official pixi image
 COPY --from=ghcr.io/prefix-dev/pixi:latest /usr/local/bin/pixi /usr/local/bin/pixi
 
-# Install system dependencies
+# Install system dependencies (including ripgrep, fd, jq, and build essentials)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     ca-certificates \
     git \
     ripgrep \
+    fd-find \
+    jq \
+    make \
     curl \
+ && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
  && rm -rf /var/lib/apt/lists/*
 
 # Delete pre-existing 'node' user with UID 1000 to avoid conflicts
