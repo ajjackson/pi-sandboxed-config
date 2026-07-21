@@ -7,5 +7,8 @@
     "enabled": true,
     "reserveTokens": 16384,
     "keepRecentTokens": 20000
-  }
+  },
+  "packages": [
+    "/home/pi/.npm-global/lib/node_modules/@twogiants/pi-anthropic-vertex"
+  ]
 }
