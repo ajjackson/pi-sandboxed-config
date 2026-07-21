@@ -1,5 +1,7 @@
 # Ignore workspace-local session histories so they aren't committed to the public repo
 .pi/sessions/
+node_modules/
+.pi/extensions/node_modules/
 
 # Ignore custom python environment if any
 __pycache__/

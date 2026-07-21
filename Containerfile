@@ -31,16 +31,18 @@ RUN userdel -r node
 RUN useradd -u 1000 -m -s /bin/bash pi
 
 # Set up global npm directory inside the pi user's home directory
-# This allows 'pi' user to install packages globally without root permissions
+# This allows the 'pi' user to install packages globally without root permissions
 ENV NPM_CONFIG_PREFIX=/home/pi/.npm-global
 ENV PATH=/home/pi/.npm-global/bin:$PATH
+ENV NODE_PATH=/home/pi/.npm-global/lib/node_modules
 
 # Switch to non-root user 'pi'
 USER pi
 WORKDIR /home/pi
 
-# Install pi-coding-agent globally for the pi user
-RUN mkdir -p /home/pi/.npm-global/lib && npm install -g @earendil-works/pi-coding-agent
+# Install pi-coding-agent and plugins globally in userspace (as user 'pi') during build time
+RUN mkdir -p /home/pi/.npm-global/lib \
+ && npm install -g @earendil-works/pi-coding-agent @twogiants/pi-anthropic-vertex
 
 # Set workspace as the default working directory
 WORKDIR /workspace

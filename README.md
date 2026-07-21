@@ -80,6 +80,44 @@ GOOGLE_CLOUD_LOCATION=us-central1
 
 ---
 
+### Support for Anthropic Claude Models on Google Vertex AI
+
+Our sandboxed environment includes pre-baked, first-class support for running Anthropic Claude models on Google Vertex AI via the popular [`@twogiants/pi-anthropic-vertex`](https://github.com/twoGiants/pi-anthropic-vertex) extension!
+
+No complex TypeScript code copying or repository bloat is needed. The extension is installed globally when the container is built and loaded instantly on startup using a simple 2-line wrapper shim (`.pi/extensions/anthropic-vertex.ts`).
+
+#### 1. Authenticate & Configure Google Vertex
+Make sure your Google Vertex API is enabled and that you have configured your environment in `~/.config/pi-launcher/.env`:
+```bash
+GOOGLE_CLOUD_PROJECT=your-gcp-project-id
+# Region where Claude models are enabled in your Vertex AI Model Garden (e.g., us-east5 or us-central1)
+GOOGLE_CLOUD_LOCATION=us-central1
+```
+
+#### 2. Set Default Model and Provider
+To make Anthropic Claude your default model, open `.pi/settings.json` and update the defaults:
+```json
+{
+  "sessionDir": ".pi/sessions",
+  "defaultProvider": "anthropic-vertex",
+  "defaultModel": "claude-sonnet-4-6",
+  "defaultThinkingLevel": "medium"
+}
+```
+
+#### 3. Usage
+You can run any Anthropic Claude models on Google Vertex AI. To check the list of available Vertex models:
+```bash
+pi-launch -- --list-models anthropic-vertex
+```
+
+Or start a session directly specifying the model:
+```bash
+pi-launch -- --provider anthropic-vertex --model claude-sonnet-4-6
+```
+
+---
+
 ## Usage
 
 To start a new sandboxed agent session, run `pi-launch` with the path to the writeable workspace. 
