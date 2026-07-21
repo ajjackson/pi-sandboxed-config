@@ -1,52 +1,61 @@
-# Workspace Context & Environment Rules (AGENTS.md)
+# Agent Guidelines & Sandbox Operational Rules (AGENTS.md)
 
-This workspace is a secure, sandboxed environment running inside a Podman container. Every fresh Pi session loads this file automatically on startup. Read and adhere to the guidelines below to avoid common environment traps.
+This file contains critical context about your runtime environment, persistence rules, and tool constraints. Read and follow these guidelines to ensure successful execution.
 
 ---
 
-## 1. Directory & Storage Persistence
-The filesystem structure uses a mix of persistent host mounts and transient in-memory filesystems:
+## PART 1: Operating in this Sandbox (FOR ALL SESSIONS)
+*Every session running inside this container must adhere to these environmental rules, regardless of the target task.*
 
-* **`/workspace` (Persistent)**: This is a persistent volume mount mapped directly to the host's project directory (`-v {project_path}:/workspace:rw,Z`). All files created, modified, or deleted here survive container restarts, session resumes, and host reboots.
+### 1. Storage & Persistence (`/workspace` vs. `/home/pi`)
+* **`/workspace` (Persistent)**: This is a persistent volume mount mapped directly to the host's project directory. All files created, modified, or deleted here survive container restarts, session resumes, and host reboots.
 * **`/home/pi` (Transient `tmpfs`)**: This directory is mounted as a transient in-memory filesystem (`--tmpfs /home/pi:U`). 
-  * *How it works*: Podman copies the image's default home directory files into `/home/pi` on startup. 
   * *Trap*: Any files or packages written to `/home/pi` (such as global npm packages via `npm install -g`, updates to `.bashrc`, `.profile`, or files under `/home/pi/.npm-global`) **are temporary and will be completely lost** when the container stops/exits.
-  * *Workaround*: If you need to install persistent extension dependencies, install them locally in the persistent workspace directory (e.g. run `npm install` inside `/workspace/.pi/extensions/` to create a local `node_modules` directory).
-  * *Python/Conda Trap*: Global python installations via standard `pip install` are disabled/blocked under PEP 668 and would be lost on reset anyway. **Always use the pre-installed `uv` or `pixi`** to manage virtualized, local, and persistent dependencies inside `/workspace` (e.g., `uv venv` or `pixi init`).
+  * *Extension Workaround*: If you need to install persistent extension dependencies, install them locally in the persistent workspace directory (e.g., run `npm install` inside `/workspace/.pi/extensions/` to create a local `node_modules` directory).
+  * *Python/Conda Trap*: Global python installations via standard `pip install` are disabled/blocked under PEP 668 and would be lost on reset anyway. **Always use the pre-installed `uv` or `pixi`** to manage virtualized, local, and persistent dependencies inside `/workspace` (e.g., run `uv venv` or `pixi init`).
 
----
-
-## 2. GCP / Google Vertex AI Environment & Auth
+### 2. GCP / Google Vertex AI Environment & Auth
 * **Pre-Authenticated**: You do not need to run `gcloud auth login` or set up Google Cloud SDK auth credentials. 
 * **Credentials Path**: The environment variable `GOOGLE_APPLICATION_CREDENTIALS` is automatically set to `/secrets/gcp-credentials.json` (a read-only bind mount from the host).
-* **Environment variables**: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, and `CLOUD_ML_REGION` are automatically injected into the container environment from the host launcher config. Use them directly.
+* **Environment variables**: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, and `CLOUD_ML_REGION` are automatically injected into the container environment. Use them directly.
 
----
-
-## 3. Podman Namespace & Root Constraints
+### 3. Podman Namespace & Root Constraints
 * **Non-Root User (`pi`)**: You run as the standard `pi` user (UID 1000) inside the container. 
 * **No `sudo`**: You do not have `sudo` access, and standard root-access commands will fail.
 * **Installing System Packages**: If you require system-level software (like `apt-get` packages), do not attempt to install them yourself. Instead, **ask the user** to run the following command in their host terminal:
   ```bash
   just root-install <container-name> <package-name>
   ```
-  *(Or they can run `just root <container-name>` to get a root shell and configure things for you.)*
 * **Active Container Name**: The active container name typically follows the pattern `pi-{project-directory-name}` (e.g., `pi-sort-out-models`).
 
----
-
-## 4. Git Worktree Isolation & Credentials
-* **Worktree Mapping**: The `/workspace` directory on the host is checked out as a detached Git worktree of the main config project.
-* **No Git Access**: The file `/workspace/.git` is a git link pointing to a host path (e.g., `/home/prg49555/src/pi-sandboxed-config/.git/worktrees/...`). Because the host's `.git` directory is not mounted inside the container, **all Git commands (e.g., `git status`, `git diff`) will fail inside the container** with:
-  `fatal: not a git repository`
-* **Commit & Push**: Do not attempt to run Git operations. Always instruct the user to review, commit, and push changes from their host terminal (outside the container).
+### 4. Git Worktree Isolation & Credentials
+* **No Git Access**: The file `/workspace/.git` is a git link pointing to a host path. Because the host's `.git` directory is not mounted inside the container for security, **all Git commands (e.g., `git status`, `git diff`) will fail inside the container** with `fatal: not a git repository`.
+* **Commit & Push**: Do not attempt to run Git operations inside the container. Always instruct the user to review, commit, and push changes from their host terminal (outside the container).
 
 ---
 
-## 5. Rebuilding the Container Image
-* If you modify the `Containerfile` (such as updating preinstalled packages or modifying global setup/environment variables), these changes **will not take effect** in the current or subsequent runs unless the image is rebuilt on the host.
-* Advise the user to run:
-  ```bash
-  just build
-  ```
-  from their host terminal to build the updated `pi-sandbox` image.
+## PART 2: Developing / Modifying this Config (META-DEVELOPMENT)
+*ATTENTION: Only follow this section if the user's specific prompt is to maintain, develop, or modify the `pi-sandboxed-config` project itself (e.g., updating the Containerfile, modifying the launcher script, or changing global settings).*
+
+If you are developing or maintaining this configuration repository:
+
+### 1. Rebuilding and Testing the Container Environment
+If you make changes to the `Containerfile`, they will not be active until the container image is rebuilt on the host.
+1. **Modify `Containerfile`**: Edit packages or configurations in `Containerfile`.
+2. **Rebuild**: Instruct the user to run the build command in their host terminal:
+   ```bash
+   just build
+   ```
+3. **Test Local Run**: Run a fresh sandbox to verify the changes took effect.
+
+### 2. Deploying the Launcher Script
+When you make updates to the `pi-launch` python wrapper:
+1. Instruct the user to redeploy the launcher to their local bin by running the install target on their host terminal:
+   ```bash
+   just install
+   ```
+2. The installer will copy `pi-launch` to `~/.local/bin/pi-launch` on their host.
+
+### 3. Cleanups & Git Guidelines
+1. **Keep the tree clean**: Verify that workspace-local files (like temporary `node_modules` or sessions) are properly ignored in `.gitignore`.
+2. **Delegate git work**: Explain to the user what changes were made and instruct them to run Git commands (like `git add`, `git commit`, `git status`, or `git push`) from their host terminal outside the container.
