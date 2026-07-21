@@ -254,6 +254,12 @@ Usage examples:
     # Automatically add '--approve' so pi trusts our project workspace directory (/workspace) on boot
     podman_cmd += ["--approve"]
 
+    # Automatically load the globally pre-installed Vertex AI extensions
+    podman_cmd += [
+        "-e", "/home/pi/.npm-global/lib/node_modules/@twogiants/pi-anthropic-vertex",
+        "-e", "/home/pi/.npm-global/lib/node_modules/@lhl/pi-vertex"
+    ]
+
     if args.resume:
         podman_cmd += ["-r"]
 

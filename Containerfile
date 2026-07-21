@@ -44,6 +44,23 @@ WORKDIR /home/pi
 RUN mkdir -p /home/pi/.npm-global/lib \
  && npm install -g @earendil-works/pi-coding-agent @twogiants/pi-anthropic-vertex
 
+# Install the extensions globally via npm -g (this writes to /home/pi/.npm-global/lib/node_modules)
+# which survives Podman's /home/pi tmpfs copy-up perfectly at container runtime.
+# We then patch two known bugs in @lhl/pi-vertex:
+#   1. toPiModel() leaves baseUrl empty, which pi's newer model validation rejects.
+#   2. Exclude Gemini/Claude (already covered by the dedicated extensions above) and
+#      Grok (no thanks) from the model list to avoid duplicate/unusable providers.
+# Version pinned deliberately: the sed patches below are matched against this exact
+# release's source (comment style, variable names). If bumping this version, first
+# check upstream (https://www.npmjs.com/package/@lhl/pi-vertex) to see whether the
+# baseUrl bug is fixed and the model-filtering patch still applies cleanly.
+RUN npm install -g @twogiants/pi-anthropic-vertex@0.1.12 @lhl/pi-vertex@1.1.9 && \
+    PLUGIN_DIR=/home/pi/.npm-global/lib/node_modules/@lhl/pi-vertex && \
+    sed -i 's#baseUrl: "", // Will be set dynamically#baseUrl: "https://aiplatform.googleapis.com", // Will be set dynamically#' "$PLUGIN_DIR/index.ts" && \
+    sed -i 's#\.\.\.MAAS_MODELS,#...MAAS_MODELS.filter((m) => !m.id.startsWith("grok-")),#' "$PLUGIN_DIR/models/index.ts" && \
+    sed -i '/\.\.\.GEMINI_MODELS,/d' "$PLUGIN_DIR/models/index.ts" && \
+    sed -i '/\.\.\.CLAUDE_MODELS,/d' "$PLUGIN_DIR/models/index.ts"
+
 # Set workspace as the default working directory
 WORKDIR /workspace
 
