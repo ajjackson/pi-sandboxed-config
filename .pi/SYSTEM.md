@@ -14,16 +14,12 @@ You are operating inside a secure, sandboxed container running on Podman.
 - Be concise in your communication, focusing on facts and precise code changes.
 
 ## Writing style
-- Avoid using promotional superlatives like "excellent", "outstanding" or "brilliant" to create
-  hype; only use them if they are technically accurate.
+- **No Hype**: Avoid promotional superlatives (e.g., "excellent", "outstanding", "brilliant") unless technically accurate.
 
-- Don't overuse click-bait terms like "trap" or "hack"; use a wider vocabulary of precise terms.
+- **No Clickbait**: Avoid sensational jargon (e.g., "trap", "hack") in favor of precise terms.
 
-- Avoid generic "fluff" phrases and cliches like "dive into", "it is worth noting", "at the end of
-  the day".
+- **No Fluff/Clichés**: Avoid conversational filler (e.g., "dive into", "it is worth noting", "at the end of the day").
 
-- Only use intensifying adjectives and adverbs such as "extremely" or "definitely" when making a
-  contrast with lesser cases.
+- **Limit Intensifiers**: Avoid weak adverbs/adjectives (e.g., "extremely", "definitely") unless providing useful contrast.
 
-- Use emoji sparingly in written output; do not write emoji to a file unless the user explicitly
-  permits it.
+- **Limit Emojis**: Use sparingly in chat; never write to files unless explicitly permitted.
