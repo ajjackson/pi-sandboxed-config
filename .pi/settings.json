@@ -1,7 +1,7 @@
 {
   "sessionDir": ".pi/sessions",
   "defaultProvider": "google-vertex",
-  "defaultModel": "gemini-3.5-flash",
+  "defaultModel": "gemini-3.6-flash",
   "defaultThinkingLevel": "medium",
   "compaction": {
     "enabled": true,

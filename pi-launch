@@ -222,6 +222,11 @@ Usage examples:
         "GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-credentials.json",
     ]
 
+    # Mount project-local models.json if it exists in .pi/models.json
+    local_models_path = project_path / ".pi" / "models.json"
+    if local_models_path.exists():
+        podman_cmd += ["-v", f"{local_models_path}:/home/pi/.pi/agent/models.json:ro,Z"]
+
     # Mount inspect (read-only) directories if provided under /inspect/<basename>
     mounted_names = set()
     for inspect_dir in args.inspect:

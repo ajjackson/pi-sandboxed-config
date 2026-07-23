@@ -11,7 +11,7 @@ COPY --from=uv_source /uv /uvx /usr/local/bin/
 # Copy pixi from our pulled build stage
 COPY --from=pixi_source /usr/local/bin/pixi /usr/local/bin/pixi
 
-# Install system dependencies (including ripgrep, fd, jq, and build essentials)
+# Install system dependencies (including ripgrep, fd, jq, emacs, and build essentials)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     ca-certificates \
@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     make \
     curl \
+    emacs-nox \
  && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
  && rm -rf /var/lib/apt/lists/*
 
@@ -35,6 +36,8 @@ RUN useradd -u 1000 -m -s /bin/bash pi
 ENV NPM_CONFIG_PREFIX=/home/pi/.npm-global
 ENV PATH=/home/pi/.npm-global/bin:$PATH
 ENV NODE_PATH=/home/pi/.npm-global/lib/node_modules
+ENV EDITOR="emacsclient -t"
+ENV ALTERNATE_EDITOR=""
 
 # Switch to non-root user 'pi'
 USER pi
@@ -62,6 +65,13 @@ RUN npm install -g @twogiants/pi-anthropic-vertex@0.1.12 @lhl/pi-vertex@1.1.9 &&
     sed -i '/\.\.\.CLAUDE_MODELS,/d' "$PLUGIN_DIR/models/index.ts"
 
 # Set workspace as the default working directory
+# Note on Configuration Files Scoping:
+# - Workspace configs (such as .pi/settings.json, session records, prompts, and skills) 
+#   are automatically searched and loaded from the project folder (/workspace/.pi).
+# - Built-in configuration files like 'models.json' or 'auth.json' are strictly scoped 
+#   to the global agent directory (~/.pi/agent/models.json) and are not natively loaded 
+#   from the workspace. The launcher script (pi-launch) automatically bind-mounts 
+#   local files (e.g. .pi/models.json) to their expected home locations inside the sandbox.
 WORKDIR /workspace
 
 # Set entrypoint to run pi
