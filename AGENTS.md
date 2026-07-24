@@ -11,7 +11,7 @@ This file contains critical context about your runtime environment, persistence 
 * **`/workspace` (Persistent)**: This is a persistent volume mount mapped directly to the host's project directory. All files created, modified, or deleted here survive container restarts, session resumes, and host reboots.
 * **`/home/pi` (Transient `tmpfs`)**: This directory is mounted as a transient in-memory filesystem (`--tmpfs /home/pi:U`). 
   * *Trap*: Any files or packages written to `/home/pi` (such as global npm packages via `npm install -g`, updates to `.bashrc`, `.profile`, or files under `/home/pi/.npm-global`) **are temporary and will be completely lost** when the container stops/exits.
-  * *Extension Workaround*: If you need to install persistent extension dependencies, install them locally in the persistent workspace directory (e.g., run `npm install` inside `/workspace/.pi/extensions/` to create a local `node_modules` directory).
+  * *Extension Workaround*: If you need to install persistent extension dependencies, install them locally in the persistent workspace directory (e.g., run `run npm install` inside `/workspace/.pi/extensions/` to create a local `node_modules` directory).
   * *Python/Conda Trap*: Global python installations via standard `pip install` are disabled/blocked under PEP 668 and would be lost on reset anyway. **Always use the pre-installed `uv` or `pixi`** to manage virtualized, local, and persistent dependencies inside `/workspace` (e.g., run `uv venv` or `pixi init`).
 
 ### 2. GCP / Google Vertex AI Environment & Auth
@@ -31,10 +31,6 @@ This file contains critical context about your runtime environment, persistence 
 ### 4. Git Worktree Isolation & Credentials
 * **No Git Access**: The file `/workspace/.git` is a git link pointing to a host path. Because the host's `.git` directory is not mounted inside the container for security, **all Git commands (e.g., `git status`, `git diff`) will fail inside the container** with `fatal: not a git repository`.
 * **Commit & Push**: Do not attempt to run Git operations inside the container. Always instruct the user to review, commit, and push changes from their host terminal (outside the container).
-
-### 5. Targeted Validation & Testing
-* **Context-Aware Verification**: Only execute project test suites (e.g., `pytest`, `make html`) when modifying executable Python code, tests, or build configurations.
-* **Avoid Unnecessary Runs**: Do not execute project test suites when editing skill files (`.pi/skills/`), documentation, configuration text, or non-executable markdown files.
 
 ---
 

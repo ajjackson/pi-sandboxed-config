@@ -14,6 +14,9 @@ Identify test configurations and files by looking for:
 - Test files matching `test_*.py` or `*_test.py`.
 - Test functions matching `test_*()`.
 
+## Best Practices for Test Writing
+* **Re-use Existing Project Fixtures**: Always use project-provided fixtures (e.g., `rng` from `conftest.py`) rather than instantiating local random number generators (`Generator(PCG64(...))`) or custom setup boilerplate.
+
 ## Activation Scenarios
 Run Pytest:
 - After modifying any business logic or adding new features.
