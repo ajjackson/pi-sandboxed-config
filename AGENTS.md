@@ -32,6 +32,10 @@ This file contains critical context about your runtime environment, persistence 
 * **No Git Access**: The file `/workspace/.git` is a git link pointing to a host path. Because the host's `.git` directory is not mounted inside the container for security, **all Git commands (e.g., `git status`, `git diff`) will fail inside the container** with `fatal: not a git repository`.
 * **Commit & Push**: Do not attempt to run Git operations inside the container. Always instruct the user to review, commit, and push changes from their host terminal (outside the container).
 
+### 5. Targeted Validation & Testing
+* **Context-Aware Verification**: Only execute project test suites (e.g., `pytest`, `make html`) when modifying executable Python code, tests, or build configurations.
+* **Avoid Unnecessary Runs**: Do not execute project test suites when editing skill files (`.pi/skills/`), documentation, configuration text, or non-executable markdown files.
+
 ---
 
 ## PART 2: Developing / Modifying this Config (META-DEVELOPMENT)
