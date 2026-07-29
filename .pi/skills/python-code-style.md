@@ -28,10 +28,18 @@ Use this guide when writing, refactoring, or reviewing Python code in this codeb
 
 ## 6. Flatter Control Flow & Pathlib Conventions
 * **Flatter Control Flow**: Use `itertools.chain(path.glob(...), path.glob(...))` instead of nested double generator comprehensions.
-* **Pathlib Methods & File Handles**: Prefer `path.open(*args)` over `open(path, *args)`, and use `fd` for file context managers (`with path.open() as fd:`).
+* **Pathlib Methods & File Handles**: Prefer `path.read_text()` (or `path.read_bytes()`) over open/read context managers for reading file contents, or `with path.open() as fd:` when streaming or writing files.
+* **Multi-Segment Path Joining**: Prefer `path / "sub/dir/file.txt"` over chaining multiple divisions (`path / "sub" / "dir" / "file.txt"`).
 * **Path Derivation**: Use `path.with_name()` or `path.with_suffix()` for path derivation.
 * **Avoid Single-Character Variables**: Avoid single-character variable names (e.g., `d`, `a`, `b`, `x`, `f`) except for standard loop indices (`i`, `j`, `k`), coordinates (`x`, `y`, `z`), or one-liners.
 
 ## 7. Test Architecture & Dependency Injection
 * **Configurable Defaults over Mocking**: Prefer exposing implementation details or lookup paths as configurable keyword arguments (with sensible defaults) as a clean alternative to monkeypatching in unit tests.
 * **Targeted Mocking**: When mocking is necessary, mock specific methods on real objects rather than replacing entire classes with fakes.
+
+## 8. CLI Scripts & Argparse Conventions
+* **Dedicated Parser Construction**: Define argument parsers in a `get_parser() -> argparse.ArgumentParser` helper function.
+* **Direct Parsing in `main()`**: Parse arguments inside `main()` using `args = get_parser().parse_args()`.
+* **Parameterless `main()`**: Keep `def main() -> None:` parameterless unless unit tests specifically invoke `main(args=...)`.
+* **Path Arguments**: Pass `type=Path` in `parser.add_argument()` when accepting filenames or directory paths.
+* **Avoid Unnecessary Variable Reassignment**: Access `args.argument_name` directly unless alias variables add genuine clarity.
