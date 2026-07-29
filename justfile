@@ -8,6 +8,10 @@ default:
 build:
     podman build -t pi-sandbox -f Containerfile .
 
+# Build the Podman container image from the beginning
+build-fresh:
+    podman build -t pi-sandbox -f Containerfile --no-cache .
+
 # Install the launcher script, configure local paths, and create default environment templates
 install default_credentials_path="":
     #!/usr/bin/env bash
