@@ -43,3 +43,4 @@ Use this guide when writing, refactoring, or reviewing Python code in this codeb
 * **Parameterless `main()`**: Keep `def main() -> None:` parameterless unless unit tests specifically invoke `main(args=...)`.
 * **Path Arguments**: Pass `type=Path` in `parser.add_argument()` when accepting filenames or directory paths.
 * **Avoid Unnecessary Variable Reassignment**: Access `args.argument_name` directly unless alias variables add genuine clarity.
+* **Default Arguments**: Use `formatter_class=argparse.ArgumentDefaultsHelpFormatter` when constructing `ArgumentParser` to automatically include default values in `--help`; do not repeat them in `parser.add_argument(help="Describe the argument...")`.
