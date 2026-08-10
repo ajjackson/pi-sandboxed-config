@@ -46,8 +46,12 @@ USER pi
 WORKDIR /home/pi
 
 # Install pi-coding-agent and plugins globally in userspace (as user 'pi') during build time
-RUN mkdir -p /home/pi/.npm-global/lib \
- && npm install -g @earendil-works/pi-coding-agent @twogiants/pi-anthropic-vertex
+RUN mkdir -p /home/pi/.npm-global/lib /home/pi/.pi/agent \
+ && npm install -g @earendil-works/pi-coding-agent @twogiants/pi-anthropic-vertex @fission-ai/openspec pi-openspec-status
+
+# Initialize OpenSpec global agent skills and prompts for pi inside /home/pi
+# and remove the side-effect 'openspec/' directory to keep /home/pi clean.
+RUN openspec init --tools pi && rm -rf /home/pi/openspec
 
 # Install the extensions globally via npm -g (this writes to /home/pi/.npm-global/lib/node_modules)
 # which survives Podman's /home/pi tmpfs copy-up perfectly at container runtime.
