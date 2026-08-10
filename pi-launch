@@ -264,6 +264,8 @@ Usage examples:
         "-e", "/home/pi/.npm-global/lib/node_modules/@twogiants/pi-anthropic-vertex",
         "-e", "/home/pi/.npm-global/lib/node_modules/@lhl/pi-vertex",
         "-e", "/home/pi/.npm-global/lib/node_modules/pi-openspec-status/extension/index.ts",
+        "-e", "/home/pi/.npm-global/lib/node_modules/pi-web-access",
+        "-e", "/home/pi/.npm-global/lib/node_modules/pi-blackhole",
     ]
 
     if args.resume:

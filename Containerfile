@@ -46,8 +46,11 @@ USER pi
 WORKDIR /home/pi
 
 # Install pi-coding-agent and plugins globally in userspace (as user 'pi') during build time
-RUN mkdir -p /home/pi/.npm-global/lib /home/pi/.pi/agent \
- && npm install -g @earendil-works/pi-coding-agent @twogiants/pi-anthropic-vertex @fission-ai/openspec pi-openspec-status
+RUN mkdir -p /home/pi/.npm-global/lib /home/pi/.pi/agent/pi-blackhole \
+ && npm install -g @earendil-works/pi-coding-agent @twogiants/pi-anthropic-vertex @fission-ai/openspec pi-openspec-status pi-web-access pi-blackhole
+
+# Pre-configure pi-blackhole for manual compaction mode
+RUN echo '{"compaction":"manual","memory":true}' > /home/pi/.pi/agent/pi-blackhole/pi-blackhole-config.json
 
 # Initialize OpenSpec global agent skills and prompts for pi inside /home/pi
 # and remove the side-effect 'openspec/' directory to keep /home/pi clean.
