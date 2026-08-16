@@ -1,6 +1,6 @@
 ---
 name: python-code-style
-description: Essential guidelines for Python coding style, modern standard library idioms, Pathlib conventions, typing, and architectural patterns.
+description: Python code style, typing conventions, Pathlib patterns, and architecture guidelines.
 ---
 # Python Code Style & Architectural Guidelines
 

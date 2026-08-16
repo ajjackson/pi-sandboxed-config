@@ -1,6 +1,6 @@
 ---
 name: ruff-linting-formatting
-description: Crucial guide for Python linting, auto-formatting, and import sorting using Ruff in this sandbox environment.
+description: Python linting, formatting, and import sorting using Ruff.
 ---
 # Python Code Quality with Ruff
 

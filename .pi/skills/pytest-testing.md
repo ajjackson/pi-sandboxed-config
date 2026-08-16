@@ -1,6 +1,6 @@
 ---
 name: pytest-testing
-description: Crucial guide for writing and executing Python tests using Pytest. Covers test execution, output capture, debugging, and coverage.
+description: Run, write, and debug Python tests using pytest.
 ---
 # Python Testing with Pytest
 

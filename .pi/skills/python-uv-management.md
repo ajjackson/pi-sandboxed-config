@@ -1,6 +1,6 @@
 ---
 name: python-uv-management
-description: Crucial guide for Python projects, package development, standalone scripts (PEP 723), or uv environment management (handling virtual environments, dependencies, and running tools).
+description: Python dependency management, virtual environments, PEP 723 standalone scripts, and tool execution using uv.
 ---
 # Python UV Dependency & Script Management
 
