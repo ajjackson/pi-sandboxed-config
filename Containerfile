@@ -73,6 +73,9 @@ RUN npm install -g @twogiants/pi-anthropic-vertex@0.1.12 @lhl/pi-vertex@1.1.9 &&
     sed -i '/\.\.\.GEMINI_MODELS,/d' "$PLUGIN_DIR/models/index.ts" && \
     sed -i '/\.\.\.CLAUDE_MODELS,/d' "$PLUGIN_DIR/models/index.ts"
 
+# Configure global settings with pre-installed packages
+RUN echo '{"packages":["npm:pi-blackhole","npm:pi-openspec-status","npm:pi-web-access","npm:@twogiants/pi-anthropic-vertex","npm:@lhl/pi-vertex"]}' > /home/pi/.pi/agent/settings.json
+
 # Set workspace as the default working directory
 # Note on Configuration Files Scoping:
 # - Workspace configs (such as .pi/settings.json, session records, prompts, and skills) 
