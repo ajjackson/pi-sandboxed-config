@@ -52,9 +52,17 @@ RUN mkdir -p /home/pi/.npm-global/lib /home/pi/.pi/agent/pi-blackhole \
 # Pre-configure pi-blackhole with Gemini-based workers and manual compaction mode
 RUN echo '{"compaction":"manual","compactionEngine":"blackhole","memory":true,"sessionFallback":true,"model":{"provider":"google-vertex","id":"gemini-3.7-flash","thinking":"low"},"observerModel":{"provider":"google-vertex","id":"gemini-3.5-flash-lite","thinking":"off"},"observerFallbackModels":[{"provider":"google-vertex","id":"gemini-3.7-flash","thinking":"off"},{"provider":"google-vertex","id":"gemini-2.5-flash-lite","thinking":"off"}],"reflectorModel":{"provider":"google-vertex","id":"gemini-3.7-flash","thinking":"low"},"reflectorFallbackModels":[{"provider":"google-vertex","id":"gemini-3.5-flash","thinking":"low"},{"provider":"google-vertex","id":"gemini-2.5-flash","thinking":"off"}],"dropperModel":{"provider":"google-vertex","id":"gemini-3.5-flash-lite","thinking":"off"},"dropperFallbackModels":[{"provider":"google-vertex","id":"gemini-3.7-flash","thinking":"off"},{"provider":"google-vertex","id":"gemini-2.5-flash-lite","thinking":"off"}]}' > /home/pi/.pi/agent/pi-blackhole/pi-blackhole-config.json
 
-# Initialize OpenSpec global agent skills and prompts for pi inside /home/pi
-# and remove the side-effect 'openspec/' directory to keep /home/pi clean.
-RUN openspec init --tools pi && rm -rf /home/pi/openspec
+# Initialize OpenSpec global agent skills and prompts for pi inside ~/.pi/agent/
+# Uses an isolated temporary directory to extract only openspec-* skills and opsx-*.md prompts
+RUN TMP_DIR=$(mktemp -d) && \
+    ( \
+      cd "$TMP_DIR" && \
+      openspec init --tools pi && \
+      mkdir -p /home/pi/.pi/agent/skills /home/pi/.pi/agent/prompts && \
+      cp -r .pi/skills/openspec-* /home/pi/.pi/agent/skills/ && \
+      cp -r .pi/prompts/opsx-*.md /home/pi/.pi/agent/prompts/ \
+    ) && \
+    rm -rf "$TMP_DIR"
 
 # Install @lhl/pi-vertex globally and patch known upstream bugs:
 #   1. toPiModel() leaves baseUrl empty, which pi's newer model validation rejects.
