@@ -49,16 +49,14 @@ WORKDIR /home/pi
 RUN mkdir -p /home/pi/.npm-global/lib /home/pi/.pi/agent/pi-blackhole \
  && npm install -g @earendil-works/pi-coding-agent @twogiants/pi-anthropic-vertex @fission-ai/openspec pi-openspec-status pi-web-access pi-blackhole
 
-# Pre-configure pi-blackhole for manual compaction mode
-RUN echo '{"compaction":"manual","memory":true}' > /home/pi/.pi/agent/pi-blackhole/pi-blackhole-config.json
+# Pre-configure pi-blackhole with Gemini-based workers and manual compaction mode
+RUN echo '{"compaction":"manual","compactionEngine":"blackhole","memory":true,"sessionFallback":true,"model":{"provider":"google-vertex","id":"gemini-3.7-flash","thinking":"low"},"observerModel":{"provider":"google-vertex","id":"gemini-3.5-flash-lite","thinking":"off"},"observerFallbackModels":[{"provider":"google-vertex","id":"gemini-3.7-flash","thinking":"off"},{"provider":"google-vertex","id":"gemini-2.5-flash-lite","thinking":"off"}],"reflectorModel":{"provider":"google-vertex","id":"gemini-3.7-flash","thinking":"low"},"reflectorFallbackModels":[{"provider":"google-vertex","id":"gemini-3.5-flash","thinking":"low"},{"provider":"google-vertex","id":"gemini-2.5-flash","thinking":"off"}],"dropperModel":{"provider":"google-vertex","id":"gemini-3.5-flash-lite","thinking":"off"},"dropperFallbackModels":[{"provider":"google-vertex","id":"gemini-3.7-flash","thinking":"off"},{"provider":"google-vertex","id":"gemini-2.5-flash-lite","thinking":"off"}]}' > /home/pi/.pi/agent/pi-blackhole/pi-blackhole-config.json
 
 # Initialize OpenSpec global agent skills and prompts for pi inside /home/pi
 # and remove the side-effect 'openspec/' directory to keep /home/pi clean.
 RUN openspec init --tools pi && rm -rf /home/pi/openspec
 
-# Install the extensions globally via npm -g (this writes to /home/pi/.npm-global/lib/node_modules)
-# which survives Podman's /home/pi tmpfs copy-up perfectly at container runtime.
-# We then patch two known bugs in @lhl/pi-vertex:
+# Install @lhl/pi-vertex globally and patch known upstream bugs:
 #   1. toPiModel() leaves baseUrl empty, which pi's newer model validation rejects.
 #   2. Exclude Gemini/Claude (already covered by the dedicated extensions above) and
 #      Grok (no thanks) from the model list to avoid duplicate/unusable providers.
@@ -66,7 +64,7 @@ RUN openspec init --tools pi && rm -rf /home/pi/openspec
 # release's source (comment style, variable names). If bumping this version, first
 # check upstream (https://www.npmjs.com/package/@lhl/pi-vertex) to see whether the
 # baseUrl bug is fixed and the model-filtering patch still applies cleanly.
-RUN npm install -g @twogiants/pi-anthropic-vertex@0.1.12 @lhl/pi-vertex@1.1.9 && \
+RUN npm install -g @lhl/pi-vertex@1.1.9 && \
     PLUGIN_DIR=/home/pi/.npm-global/lib/node_modules/@lhl/pi-vertex && \
     sed -i 's#baseUrl: "", // Will be set dynamically#baseUrl: "https://aiplatform.googleapis.com", // Will be set dynamically#' "$PLUGIN_DIR/index.ts" && \
     sed -i 's#\.\.\.MAAS_MODELS,#...MAAS_MODELS.filter((m) => !m.id.startsWith("grok-")),#' "$PLUGIN_DIR/models/index.ts" && \
