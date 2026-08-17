@@ -1,0 +1,11 @@
+--- a/index.ts
++++ b/index.ts
+@@ -43,7 +43,7 @@
+     name: config.name,
+     api: "vertex-unified",
+     provider: "vertex",
+-    baseUrl: "", // Will be set dynamically
++    baseUrl: "https://aiplatform.googleapis.com", // Will be set dynamically
+     reasoning: config.reasoning,
+     input: config.input,
+     cost: config.cost,

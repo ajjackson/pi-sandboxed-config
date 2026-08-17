@@ -11,7 +11,7 @@ COPY --from=uv_source /uv /uvx /usr/local/bin/
 # Copy pixi from our pulled build stage
 COPY --from=pixi_source /usr/local/bin/pixi /usr/local/bin/pixi
 
-# Install system dependencies (including ripgrep, fd, jq, emacs, and build essentials)
+# Install system dependencies (including ripgrep, fd, jq, emacs, patch, and build essentials)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     ca-certificates \
@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     make \
     curl \
+    patch \
     emacs-nox \
     procps \
     graphviz \
@@ -64,23 +65,17 @@ RUN TMP_DIR=$(mktemp -d) && \
     ) && \
     rm -rf "$TMP_DIR"
 
-# Install @lhl/pi-vertex globally and patch known upstream bugs:
-#   1. toPiModel() leaves baseUrl empty, which pi's newer model validation rejects.
-#   2. Exclude Gemini/Claude (already covered by the dedicated extensions above) and
-#      Grok (no thanks) from the model list to avoid duplicate/unusable providers.
-# Version pinned deliberately: the sed patches below are matched against this exact
-# release's source (comment style, variable names). If bumping this version, first
-# check upstream (https://www.npmjs.com/package/@lhl/pi-vertex) to see whether the
-# baseUrl bug is fixed and the model-filtering patch still applies cleanly.
+# Copy build patches and custom agent extensions
+COPY --chown=pi:pi patches/ /home/pi/.patches/
+COPY --chown=pi:pi extensions/ /home/pi/.pi/agent/extensions/
+
+# Install @lhl/pi-vertex globally and apply bugfix patch (fixes empty baseUrl in toPiModel).
 RUN npm install -g @lhl/pi-vertex@1.1.9 && \
-    PLUGIN_DIR=/home/pi/.npm-global/lib/node_modules/@lhl/pi-vertex && \
-    sed -i 's#baseUrl: "", // Will be set dynamically#baseUrl: "https://aiplatform.googleapis.com", // Will be set dynamically#' "$PLUGIN_DIR/index.ts" && \
-    sed -i 's#\.\.\.MAAS_MODELS,#...MAAS_MODELS.filter((m) => !m.id.startsWith("grok-")),#' "$PLUGIN_DIR/models/index.ts" && \
-    sed -i '/\.\.\.GEMINI_MODELS,/d' "$PLUGIN_DIR/models/index.ts" && \
-    sed -i '/\.\.\.CLAUDE_MODELS,/d' "$PLUGIN_DIR/models/index.ts"
+    patch -p1 -d /home/pi/.npm-global/lib/node_modules/@lhl/pi-vertex < /home/pi/.patches/pi-vertex-baseurl.patch && \
+    rm -rf /home/pi/.patches
 
 # Configure global settings with pre-installed packages
-RUN echo '{"packages":["npm:pi-blackhole","npm:pi-openspec-status","npm:pi-web-access","npm:@twogiants/pi-anthropic-vertex","npm:@lhl/pi-vertex"]}' > /home/pi/.pi/agent/settings.json
+RUN echo '{"packages":["npm:pi-blackhole","npm:pi-openspec-status","npm:pi-web-access","npm:@twogiants/pi-anthropic-vertex","local:/home/pi/.pi/agent/extensions/pi-vertex-filter"]}' > /home/pi/.pi/agent/settings.json
 
 # Set workspace as the default working directory
 # Note on Configuration Files Scoping:
