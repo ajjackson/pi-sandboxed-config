@@ -3,6 +3,20 @@
     "google-vertex": {
       "models": [
         {
+          "id": "gemini-3.8-flash",
+          "name": "Gemini 3.8 Flash",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "contextWindow": 1048576,
+          "maxTokens": 65536,
+          "cost": {
+            "input": 0.75,
+            "output": 3.75,
+            "cacheRead": 0.075,
+            "cacheWrite": 0
+          }
+        },
+        {
           "id": "gemini-3.7-flash",
           "name": "Gemini 3.7 Flash",
           "reasoning": true,
