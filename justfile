@@ -12,9 +12,8 @@ build:
 build-fresh:
     podman build -t pi-sandbox -f Containerfile --no-cache .
 
-# Safely reclaim disk space by pruning dangling build layers, build cache, and stopped pi-* containers
+# Safely reclaim disk space by pruning dangling build layers and stopped pi-* containers
 prune:
-    podman build cache prune -f || true
     podman image prune -f
     podman container prune --filter "name=pi-.*" -f
 
