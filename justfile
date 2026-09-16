@@ -12,6 +12,12 @@ build:
 build-fresh:
     podman build -t pi-sandbox -f Containerfile --no-cache .
 
+# Safely reclaim disk space by pruning dangling build layers, build cache, and stopped pi-* containers
+prune:
+    podman build cache prune -f || true
+    podman image prune -f
+    podman container prune --filter "name=pi-.*" -f
+
 # Install the launcher script, configure local paths, and create default environment templates
 install default_credentials_path="":
     #!/usr/bin/env bash

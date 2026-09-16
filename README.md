@@ -133,6 +133,7 @@ pi-launch -p ~/projects/my-new-task
 ### Options:
 * `-p`, `--project-dir`: The path to the writeable workspace. Defaults to the current working directory.
 * `-r`, `--resume`: Direct first-class flag to resume a previous Pi session inside this workspace.
+* `-n`, `--name`: Custom container name. Defaults to `pi-{project_name}`, auto-incrementing (`-2`, `-3`) if already running.
 * `-i`, `--inspect`: Path to a read-only directory on the host to mount under `/inspect/<basename>` inside the sandbox (can be specified multiple times).
 * `-c`, `--gcp-creds`: Override path to Google Vertex credentials JSON.
 

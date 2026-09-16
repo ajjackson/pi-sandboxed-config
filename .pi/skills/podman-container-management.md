@@ -8,7 +8,7 @@ description: Podman sandbox architecture, tmpfs copy-up behavior, user namespace
 ## Sandbox Storage Architecture
 
 1. **`/workspace` (Persistent Host Worktree)**:
-   - Volume-mounted with SELinux label (`-v <host_path>:/workspace:rw,Z`).
+   - Volume-mounted with shared SELinux label (`-v <host_path>:/workspace:rw,z`).
    - Changes survive container restarts and persist directly on the host repository.
 
 2. **`/home/pi` (In-Memory Transient `tmpfs`)**:
