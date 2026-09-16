@@ -4,7 +4,7 @@ You operate inside a secure, sandboxed Podman container.
 ## Environment Constraints
 - **User Role**: Run as non-root user `pi`. No `sudo` access is available.
 - **System Packages**: Ask the user to run `just root-install <container-name> <package-name>` from their host terminal for root/system package installs.
-- **Git**: No git credentials or write access inside the container. Direct the user to review, commit, and push from their host terminal.
+- **Git**: Git metadata is mounted read-only (`:ro`) for inspecting status, diffs, and HEAD/branch info. No write access or git credentials are inside the container; direct the user to review, commit, and push from their host terminal.
 - **Workspace**: `/workspace` is a writable Git worktree. Read, write, and modify files freely.
 
 ## Code & Tool Strategy

@@ -20,6 +20,12 @@ description: Podman sandbox architecture, tmpfs copy-up behavior, user namespace
    - Runs with `--userns=keep-id:uid=1000,gid=1000` to map host user UID/GID to container `pi` user (UID 1000).
    - Provides identical file ownership between container and host worktree without requiring root.
 
+4. **Git Metadata & Worktree Architecture**:
+   - **Read-Only Mounting (`:ro,z`)**: `pi-launch` resolves and mounts Git metadata directories read-only. For standard repos, `.git` is mounted read-only over `/workspace`. For detached worktrees, both the worktree gitdir (`.git/worktrees/<name>`) and common gitdir (`.git`) are mounted read-only at their host paths.
+   - **Worktree Pointers**: In a worktree, `/workspace/.git` is a single-line pointer (`gitdir: /host/path/...`). The live state is stored in `<worktree_gitdir>/HEAD`, which contains `ref: refs/heads/<branch>` (on branches) or the raw 40-character commit hash (detached worktrees).
+   - **Write Protection**: Any write operation (`git commit`, `git add`, `git tag`) fails with `Read-only file system` at the Linux VFS kernel level.
+   - **Live Footer Updates**: The container extension `container-info` watches `<worktree_gitdir>/HEAD` via `fs.watch`. When the user commits on the host, `HEAD` updates atomically, triggering an immediate TUI redraw with the new 8-character commit hash.
+
 ---
 
 ## Troubleshooting Sandbox & Tmpfs Issues
@@ -43,6 +49,6 @@ description: Podman sandbox architecture, tmpfs copy-up behavior, user namespace
   ```
   Or access a root shell from the host with `just root <container-name>`.
 
-### 4. Git Commands Inside Container Fail (`fatal: not a git repository`)
-* **Cause**: `/workspace/.git` is a git link pointing to the host's `.git` storage, which is intentionally unmounted for security.
-* **Fix**: Direct the user to review, commit, and push from their host terminal outside the container.
+### 4. Git Write Operations Inside Container Fail (`Read-only file system`)
+* **Behavior**: Git metadata is intentionally mounted read-only (`:ro,z`) for security so the container cannot tamper with git history, commit, or push.
+* **Fix**: Inspection commands (`git status`, `git diff`, `git log`, `git rev-parse`) work inside the container. Direct the user to review, commit, and push from their host terminal outside the container.

@@ -29,8 +29,11 @@ This file contains critical context about your runtime environment, persistence 
 * **Active Container Name**: The active container name typically follows the pattern `pi-{project-directory-name}` (e.g., `pi-sort-out-models`).
 
 ### 4. Git Worktree Isolation & Credentials
-* **No Git Access**: The file `/workspace/.git` is a git link pointing to a host path. Because the host's `.git` directory is not mounted inside the container for security, **all Git commands (e.g., `git status`, `git diff`) will fail inside the container** with `fatal: not a git repository`.
-* **Commit & Push**: Do not attempt to run Git operations inside the container. Always instruct the user to review, commit, and push changes from their host terminal (outside the container).
+* **Read-Only Git Metadata**: `pi-launch` automatically resolves and volume-mounts Git metadata directories read-only (`:ro,z`). For standard repositories, `.git` is mounted read-only. For Git worktrees (created via `git worktree add --detach`), both the worktree git directory and common repository directory are mounted read-only at their host paths.
+* **Inspect Commands Available**: Read-only Git commands (such as `git status`, `git diff`, `git log`, and inspecting `HEAD`) work inside the container without errors.
+* **No Write Access or Credentials**: The container has **zero write permission** to Git history. Commands modifying Git state (such as `git commit`, `git add`, `git push`, `git checkout -b`) will fail with `Read-only file system`. No Git credentials, SSH keys, or write tokens are mounted into the container.
+* **Commit & Push from Host**: Do not attempt to run Git write operations inside the container. Always instruct the user to review, commit, and push changes from their host terminal (outside the container).
+* **Live TUI Footer Tracking**: The container TUI footer actively tracks `HEAD` via filesystem watchers. In detached worktrees, it renders the 8-character commit hash `(<hash>)`. In branch worktrees, it renders `(<branch>)`. When commits are made on the host, the footer updates live in real-time.
 
 ---
 

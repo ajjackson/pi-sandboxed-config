@@ -70,6 +70,67 @@ def resolve_container_name(base_name, existing_names):
     return f"{base_name}-{counter}"
 
 
+def get_git_ref(project_path):
+    try:
+        # First, try to get the symbolic branch name
+        res = subprocess.run(
+            ["git", "-C", str(project_path), "symbolic-ref", "--quiet", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        branch = res.stdout.strip()
+        if res.returncode == 0 and branch:
+            return branch
+
+        # If detached HEAD, get the 8-character commit hash
+        res = subprocess.run(
+            ["git", "-C", str(project_path), "rev-parse", "--short=8", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        commit_hash = res.stdout.strip()
+        if res.returncode == 0 and commit_hash:
+            return commit_hash
+        return None
+    except (subprocess.SubprocessError, OSError):
+        return None
+
+
+def get_git_ro_mounts(project_path):
+    """
+    Mount Git metadata read-only (:ro,z) to allow live inspection of HEAD,
+    branch, and commit hash without granting write permission to Git history.
+    """
+    git_indicator = project_path / ".git"
+    if not git_indicator.exists():
+        return []
+
+    mounts = []
+    if git_indicator.is_dir():
+        # Standard repository: protect .git by mounting it read-only over rw /workspace
+        mounts.extend(["-v", f"{git_indicator}:/workspace/.git:ro,z"])
+    elif git_indicator.is_file():
+        # Git worktree: mount the worktree gitdir and common gitdir read-only
+        try:
+            content = git_indicator.read_text().strip()
+            if content.startswith("gitdir: "):
+                raw_path = content[8:].strip()
+                worktree_git_dir = (project_path / raw_path).resolve()
+                if worktree_git_dir.exists():
+                    mounts.extend(["-v", f"{worktree_git_dir}:{worktree_git_dir}:ro,z"])
+                    commondir_file = worktree_git_dir / "commondir"
+                    if commondir_file.exists():
+                        common_rel = commondir_file.read_text().strip()
+                        main_git_dir = (worktree_git_dir / common_rel).resolve()
+                        if main_git_dir.exists():
+                            mounts.extend(["-v", f"{main_git_dir}:{main_git_dir}:ro,z"])
+        except OSError:
+            pass
+    return mounts
+
+
 def ensure_git_worktree(repo_path, project_dir):
     project_path = Path(project_dir).resolve()
 
@@ -258,6 +319,14 @@ Usage examples:
         "-e",
         f"PI_CONTAINER_NAME={container_name}",
     ]
+
+    # Mount Git metadata read-only for live branch/commit inspection without write permissions
+    podman_cmd += get_git_ro_mounts(project_path)
+
+    # Inject current Git branch or 8-character commit hash if in a repository
+    git_ref = get_git_ref(project_path)
+    if git_ref:
+        podman_cmd += ["-e", f"GIT_BRANCH={git_ref}", "-e", f"GIT_REF={git_ref}"]
 
     # Mount project-local models.json if it exists in .pi/models.json
     local_models_path = project_path / ".pi" / "models.json"
