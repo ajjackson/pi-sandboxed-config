@@ -69,9 +69,10 @@ RUN TMP_DIR=$(mktemp -d) && \
 COPY --chown=pi:pi patches/ /home/pi/.patches/
 COPY --chown=pi:pi extensions/ /home/pi/.pi/agent/extensions/
 
-# Install @lhl/pi-vertex globally and apply bugfix patch (fixes empty baseUrl in toPiModel).
+# Install @lhl/pi-vertex globally and apply bugfix patches (fixes empty baseUrl in toPiModel, adds GLM-5.2 model).
 RUN npm install -g @lhl/pi-vertex@1.1.9 && \
     patch -p1 -d /home/pi/.npm-global/lib/node_modules/@lhl/pi-vertex < /home/pi/.patches/pi-vertex-baseurl.patch && \
+    patch -p1 -d /home/pi/.npm-global/lib/node_modules/@lhl/pi-vertex < /home/pi/.patches/pi-vertex-add-glm-5.2.patch && \
     rm -rf /home/pi/.patches
 
 # Configure global settings with pre-installed packages
