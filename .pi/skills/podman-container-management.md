@@ -52,3 +52,7 @@ description: Podman sandbox architecture, tmpfs copy-up behavior, user namespace
 ### 4. Git Write Operations Inside Container Fail (`Read-only file system`)
 * **Behavior**: Git metadata is intentionally mounted read-only (`:ro,z`) for security so the container cannot tamper with git history, commit, or push.
 * **Fix**: Inspection commands (`git status`, `git diff`, `git log`, `git rev-parse`) work inside the container. Direct the user to review, commit, and push from their host terminal outside the container.
+
+### 5. Nested Podman Errors (`/dev/fuse: No such file or directory` or `mount proc: Operation not permitted`)
+* **Cause**: Sandbox was launched without the nested container flags enabled.
+* **Fix**: Exit the sandbox and relaunch from the host terminal with `pi-launch -C` (or `pi-launch --nested-containers`). This passes `--device /dev/fuse` and `--security-opt unmask=/proc/*` into the sandbox.

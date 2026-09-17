@@ -27,6 +27,7 @@ This file contains critical context about your runtime environment, persistence 
   just root-install <container-name> <package-name>
   ```
 * **Active Container Name**: The active container name typically follows the pattern `pi-{project-directory-name}` (e.g., `pi-sort-out-models`).
+* **Nested Containers / Unit Tests**: Rootless Podman is installed inside the sandbox. When the sandbox is launched with `pi-launch -C` (or `--nested-containers`), `/dev/fuse` is mounted and `/proc` is unmasked, enabling nested container execution (e.g. `podman run --rm alpine uname -a` or containerized test suites). If `podman` fails with `/dev/fuse: No such file or directory` or `mount proc to proc: Operation not permitted`, instruct the user to relaunch the sandbox from the host with `pi-launch -C`.
 
 ### 4. Git Worktree Isolation & Credentials
 * **Read-Only Git Metadata**: `pi-launch` automatically resolves and volume-mounts Git metadata directories read-only (`:ro,z`). For standard repositories, `.git` is mounted read-only. For Git worktrees (created via `git worktree add --detach`), both the worktree git directory and common repository directory are mounted read-only at their host paths.

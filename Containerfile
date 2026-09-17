@@ -25,7 +25,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     emacs-nox \
     procps \
     graphviz \
+    podman \
+    crun \
+    fuse-overlayfs \
+    slirp4netns \
+    uidmap \
+    libcap2-bin \
  && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
+ && chmod u-s /usr/bin/newuidmap /usr/bin/newgidmap \
+ && setcap cap_setuid=ep /usr/bin/newuidmap \
+ && setcap cap_setgid=ep /usr/bin/newgidmap \
  && find /usr/share/emacs -name "*.el.gz" -delete \
  && rm -rf /var/lib/apt/lists/*
 
@@ -33,7 +42,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN userdel -r node
 
 # Create a non-root user 'pi' with standard UID 1000
-RUN useradd -u 1000 -m -s /bin/bash pi
+RUN useradd -u 1000 -m -s /bin/bash pi \
+ && echo "pi:100000:65536" > /etc/subuid \
+ && echo "pi:100000:65536" > /etc/subgid
+
+# Pre-configure nested Podman engine, storage drivers, and default registries
+RUN mkdir -p /etc/containers && \
+    printf '[containers]\ncgroups = "disabled"\nnetns = "host"\nutsns = "host"\nipcns = "host"\ncgroupns = "host"\nlog_driver = "k8s-file"\n\n[engine]\ncgroup_manager = "cgroupfs"\nevents_logger = "file"\nruntime = "crun"\n' > /etc/containers/containers.conf && \
+    printf '[storage]\ndriver = "overlay"\nrunroot = "/tmp/podman-run-1000/containers"\n\n[storage.options]\nmount_program = "/usr/bin/fuse-overlayfs"\nmountopt = "nodev,fsync=0"\n' > /etc/containers/storage.conf && \
+    printf 'unqualified-search-registries = ["docker.io", "quay.io"]\n' > /etc/containers/registries.conf
 
 # Set up global npm directory inside the pi user's home directory
 # This allows the 'pi' user to install packages globally without root permissions
@@ -42,6 +59,7 @@ ENV PATH=/home/pi/.npm-global/bin:$PATH
 ENV NODE_PATH=/home/pi/.npm-global/lib/node_modules
 ENV EDITOR="emacsclient -t"
 ENV ALTERNATE_EDITOR=""
+ENV XDG_RUNTIME_DIR=/tmp/podman-run-1000
 
 # Switch to non-root user 'pi'
 USER pi

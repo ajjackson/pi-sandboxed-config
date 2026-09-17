@@ -133,6 +133,7 @@ pi-launch -p ~/projects/my-new-task
 ### Options:
 * `-p`, `--project-dir`: The path to the writeable workspace. Defaults to the current working directory.
 * `-r`, `--resume`: Direct first-class flag to resume a previous Pi session inside this workspace.
+* `-C`, `--nested-containers`, `--podman`: Enable nested rootless Podman inside the sandbox (mounts `/dev/fuse` and unmasks `/proc`) for running containerized unit tests.
 * `-n`, `--name`: Custom container name. Defaults to `pi-{project_name}`, auto-incrementing (`-2`, `-3`) if already running.
 * `-i`, `--inspect`: Path to a read-only directory on the host to mount under `/inspect/<basename>` inside the sandbox (can be specified multiple times).
 * `-c`, `--gcp-creds`: Override path to Google Vertex credentials JSON.
@@ -159,6 +160,19 @@ just root pi-my-new-task
 
 # Or directly install a package from the host:
 just root-install pi-my-new-task python3-pip
+```
+
+### Running Containerized Tests (Nested Podman)
+If your project test suite runs containers (e.g. testcontainers, isolated database fixtures, or Docker-based CI steps), launch the sandbox with `-C`:
+
+```bash
+pi-launch -C
+# or: pi-launch -p ~/projects/my-task -C
+```
+
+Inside the sandbox, the agent can run rootless Podman commands directly:
+```bash
+podman run --rm alpine uname -a
 ```
 
 ### Merging Customizations Back into GitHub

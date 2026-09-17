@@ -183,6 +183,7 @@ def main():
         epilog="""
 Usage examples:
   pi-launch                               # Launches in current directory
+  pi-launch -C                            # Launches with nested container support enabled
   pi-launch -r                            # Resumes last session in current directory
   pi-launch -p ~/projects/my-analysis     # Launches in specific directory
   pi-launch -p ~/projects/my-analysis -r  # Resumes in specific directory
@@ -224,6 +225,15 @@ Usage examples:
         action="append",
         default=[],
         help="Paths to read-only directories on the host to mount under /inspect/ inside the sandbox (can be specified multiple times).",
+    )
+
+    parser.add_argument(
+        "-C",
+        "--nested-containers",
+        "--podman",
+        dest="nested_containers",
+        action="store_true",
+        help="Enable nested rootless Podman inside the sandbox (mounts /dev/fuse and unmasks /proc).",
     )
 
     # Pre-process arguments to separate launcher options from extra Pi options
@@ -320,6 +330,28 @@ Usage examples:
         f"PI_CONTAINER_NAME={container_name}",
     ]
 
+    # Enable nested rootless Podman inside the sandbox if requested
+    if args.nested_containers:
+        # On native Linux hosts, verify that /dev/fuse is available.
+        # On macOS, Podman runs inside a Linux VM (podman-machine) which provides /dev/fuse natively.
+        if sys.platform.startswith("linux") and not Path("/dev/fuse").exists():
+            print(
+                "Warning: /dev/fuse device not found on host. Nested containers require FUSE.",
+                file=sys.stderr,
+            )
+            print(
+                "Ensure the fuse module is loaded on the host (e.g. 'sudo modprobe fuse').",
+                file=sys.stderr,
+            )
+        podman_cmd += [
+            "--device",
+            "/dev/fuse",
+            "--security-opt",
+            "label=disable",
+            "--security-opt",
+            "unmask=/proc/*",
+        ]
+
     # Mount Git metadata read-only for live branch/commit inspection without write permissions
     podman_cmd += get_git_ro_mounts(project_path)
 
@@ -378,6 +410,8 @@ Usage examples:
     print("\n" + "=" * 60)
     print(f"Launching sandboxed Pi container: '{container_name}'")
     print(f"Workspace: {project_path}")
+    if args.nested_containers:
+        print("Nested containers: Enabled (/dev/fuse, unmasked /proc)")
     print(
         f"Run 'just root {container_name}' in another terminal for root shell access."
     )
