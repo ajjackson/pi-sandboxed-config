@@ -56,3 +56,7 @@ description: Podman sandbox architecture, tmpfs copy-up behavior, user namespace
 ### 5. Nested Podman Errors (`/dev/fuse: No such file or directory` or `mount proc: Operation not permitted`)
 * **Cause**: Sandbox was launched without the nested container flags enabled.
 * **Fix**: Exit the sandbox and relaunch from the host terminal with `pi-launch -C` (or `pi-launch --nested-containers`). This passes `--device /dev/fuse` and `--security-opt unmask=/proc/*` into the sandbox.
+
+### 6. Nested Podman Namespace Errors (`newuidmap: write to uid_map failed: Operation not permitted`)
+* **Cause**: Inside the container, `/etc/subuid` requests subordinate UIDs outside the range mapped into the outer container by the Linux host's rootless user namespace (typically limited to 65536 IDs).
+* **Fix**: Ensure `/etc/subuid` and `/etc/subgid` in `Containerfile` are configured to allocate within the parent namespace (`pi:1001:64535`). If larger ranges are required, expand subordinate IDs on the host (`sudo usermod --add-subuids 100000-265535 $USER` and `podman system migrate`).

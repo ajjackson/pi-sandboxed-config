@@ -42,9 +42,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN userdel -r node
 
 # Create a non-root user 'pi' with standard UID 1000
+# In a rootless outer container on Linux, the parent user namespace only contains UIDs up to 65536.
+# Subordinate UIDs must stay within the parent namespace (1001-64535) so newuidmap can map them.
 RUN useradd -u 1000 -m -s /bin/bash pi \
- && echo "pi:100000:65536" > /etc/subuid \
- && echo "pi:100000:65536" > /etc/subgid
+ && echo "pi:1001:64535" > /etc/subuid \
+ && echo "pi:1001:64535" > /etc/subgid
 
 # Pre-configure nested Podman engine, storage drivers, and default registries
 RUN mkdir -p /etc/containers && \
@@ -60,6 +62,7 @@ ENV NODE_PATH=/home/pi/.npm-global/lib/node_modules
 ENV EDITOR="emacsclient -t"
 ENV ALTERNATE_EDITOR=""
 ENV XDG_RUNTIME_DIR=/tmp/podman-run-1000
+ENV _CONTAINERS_USERNS_CONFIGURED=""
 
 # Switch to non-root user 'pi'
 USER pi
