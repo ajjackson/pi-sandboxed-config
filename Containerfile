@@ -35,7 +35,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && chmod u-s /usr/bin/newuidmap /usr/bin/newgidmap \
  && setcap cap_setuid=ep /usr/bin/newuidmap \
  && setcap cap_setgid=ep /usr/bin/newgidmap \
- && find /usr/share/emacs -name "*.el.gz" -delete \
  && rm -rf /var/lib/apt/lists/*
 
 # Delete pre-existing 'node' user with UID 1000 to avoid conflicts
