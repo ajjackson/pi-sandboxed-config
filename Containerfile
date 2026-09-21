@@ -118,7 +118,7 @@ RUN npm install -g @lhl/pi-vertex@1.1.9 && \
     find /home/pi/.npm-global/lib/node_modules -mindepth 3 -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "examples" \) -exec rm -rf {} + 2>/dev/null || true
 
 # Configure global settings with pre-installed packages and defaults
-RUN echo '{"defaultProvider":"google-vertex","defaultModel":"gemini-3.8-flash","packages":["npm:pi-blackhole","npm:pi-openspec-status","npm:pi-web-access","npm:@twogiants/pi-anthropic-vertex","local:/home/pi/.pi/agent/extensions/pi-vertex-filter","local:/home/pi/.pi/agent/extensions/container-info"]}' > /home/pi/.pi/agent/settings.json
+RUN echo '{"defaultProvider":"google-vertex","defaultModel":"gemini-3.8-flash","packages":["npm:pi-blackhole","npm:pi-openspec-status","npm:pi-web-access","npm:@twogiants/pi-anthropic-vertex","local:/home/pi/.pi/agent/extensions/pi-vertex-filter","local:/home/pi/.pi/agent/extensions/container-info","local:/home/pi/.pi/agent/extensions/openspec-autocomplete"]}' > /home/pi/.pi/agent/settings.json
 
 # Set workspace as the default working directory
 # Note on Configuration Files Scoping:
