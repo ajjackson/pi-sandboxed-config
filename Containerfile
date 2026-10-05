@@ -120,6 +120,14 @@ RUN npm install -g @lhl/pi-vertex@1.1.9 && \
 # Configure global settings with pre-installed packages and defaults
 RUN echo '{"defaultProvider":"google-vertex","defaultModel":"gemini-3.8-flash","packages":["npm:pi-blackhole","npm:pi-openspec-status","npm:pi-web-access","npm:@twogiants/pi-anthropic-vertex","local:/home/pi/.pi/agent/extensions/pi-vertex-filter","local:/home/pi/.pi/agent/extensions/container-info","local:/home/pi/.pi/agent/extensions/openspec-autocomplete"]}' > /home/pi/.pi/agent/settings.json
 
+# Create fake api_key for benefit of extensions that don't know about GCP authentication:
+# (pi recognises this sentinel and will fall back to appropriate system)
+RUN echo '{"google-vertex":{"type":"api_key","key":"gcp-vertex-credentials"}}' > /home/pi/.pi/agent/auth.json \
+ && chmod 600 /home/pi/.pi/agent/auth.json
+
+# Pre-configure pi-web-access defaults (cheap model for fetch_content answer mode)
+RUN echo '{"fetch":{"answerProvider":"google-vertex","answerModel":"gemini-3.5-flash-lite"}}' > /home/pi/.pi/agent/web-search.json
+
 # Set workspace as the default working directory
 # Note on Configuration Files Scoping:
 # - Workspace configs (such as .pi/settings.json, session records, prompts, and skills) 
