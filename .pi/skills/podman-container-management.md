@@ -60,3 +60,21 @@ description: Podman sandbox architecture, tmpfs copy-up behavior, user namespace
 ### 6. Nested Podman Namespace Errors (`newuidmap: write to uid_map failed: Operation not permitted`)
 * **Cause**: Inside the container, `/etc/subuid` requests subordinate UIDs outside the range mapped into the outer container by the Linux host's rootless user namespace (typically limited to 65536 IDs).
 * **Fix**: Ensure `/etc/subuid` and `/etc/subgid` in `Containerfile` are configured to allocate within the parent namespace (`pi:1001:64535`). If larger ranges are required, expand subordinate IDs on the host (`sudo usermod --add-subuids 100000-265535 $USER` and `podman system migrate`).
+
+### 7. Slow Execution with `amd64` Containers on Apple Silicon
+* **Cause**: Podman machine was initialized with Rosetta disabled. In Podman 5.6+ and Podman 6, the default provider changed to `libkrun` and Rosetta defaults to `false`, causing amd64 emulation to fall back to slow QEMU user-mode emulation.
+* **Diagnosis**: Run `podman machine inspect --format '{{.Rosetta}}'` and verify VM kernel support with `podman machine ssh "test -f /proc/sys/fs/binfmt_misc/rosetta"`.
+* **Important Warning**: Do **not** run `podman machine rm` unless necessary; removing the machine destroys the virtual disk and deletes all downloaded or built container images.
+* **Fix**:
+  * **If existing machine uses `applehv` (In-Place, No Image Loss)**:
+    1. `podman machine start` dynamically reads `containers.conf` on boot. Add to `~/.config/containers/containers.conf` on the Mac host:
+       ```toml
+       [machine]
+       provider = "applehv"
+       rosetta = true
+       ```
+    2. Restart the machine: `podman machine stop && podman machine start`.
+    3. If `inspect` returns `true` but the kernel test still reports QEMU fallback, run `podman machine ssh "sudo touch /etc/containers/enable-rosetta"` and restart again.
+  * **If existing machine uses `libkrun` (Podman 5.6+/6 default)**:
+    Provider cannot be changed in-place. Create the `containers.conf` file as above, then recreate the machine (this deletes local container images):
+    `podman machine stop && podman machine rm && podman machine init && podman machine start`. (No CLI flags needed on init once `containers.conf` is configured).

@@ -48,6 +48,57 @@ def parse_env_file():
         )
 
 
+def check_macos_rosetta():
+    """
+    On macOS host, check if the running Podman machine has Rosetta translation active.
+    Returns:
+      True if Rosetta is enabled and active,
+      False if Rosetta is disabled or binfmt is missing (falling back to QEMU),
+      None if not running on macOS or check cannot be determined.
+    """
+    if sys.platform != "darwin":
+        return None
+
+    try:
+        # Check machine configuration
+        res = subprocess.run(
+            ["podman", "machine", "inspect", "--format", "{{.Rosetta}}"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=4,
+        )
+        if res.returncode == 0:
+            val = res.stdout.strip().lower()
+            if val == "false":
+                return False
+            if val == "true":
+                # Verify active binfmt registration in the VM
+                ssh_res = subprocess.run(
+                    ["podman", "machine", "ssh", "test -f /proc/sys/fs/binfmt_misc/rosetta"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=3,
+                )
+                return ssh_res.returncode == 0
+    except (subprocess.SubprocessError, OSError):
+        pass
+    return None
+
+
+def check_image_exists(image_name):
+    try:
+        res = subprocess.run(
+            ["podman", "image", "exists", image_name],
+            capture_output=True,
+            check=False,
+        )
+        return res.returncode == 0
+    except (subprocess.SubprocessError, OSError):
+        return True
+
+
 def get_existing_container_names():
     try:
         res = subprocess.run(
@@ -183,9 +234,11 @@ def main():
         epilog="""
 Usage examples:
   pi-launch                               # Launches in current directory
+  pi-launch -a                            # Launches amd64 container under Rosetta emulation
   pi-launch -C                            # Launches with nested container support enabled
   pi-launch -r                            # Resumes last session in current directory
   pi-launch -p ~/projects/my-analysis     # Launches in specific directory
+  pi-launch -a -p ~/projects/my-analysis  # Launches amd64 container in specific directory
   pi-launch -p ~/projects/my-analysis -r  # Resumes in specific directory
   pi-launch -i /path/to/readonly/data     # Launches mounting a read-only inspect folder
   pi-launch -- --offline                  # Forwards options after -- directly to pi
@@ -225,6 +278,13 @@ Usage examples:
         action="append",
         default=[],
         help="Paths to read-only directories on the host to mount under /inspect/ inside the sandbox (can be specified multiple times).",
+    )
+
+    parser.add_argument(
+        "-a",
+        "--amd64",
+        action="store_true",
+        help="Launch using the amd64 container image (pi-sandbox:amd64) under Rosetta emulation.",
     )
 
     parser.add_argument(
@@ -290,12 +350,52 @@ Usage examples:
     ensure_git_worktree(repo_path, args.project_dir)
     project_path = Path(args.project_dir).resolve()
 
+    # Warn if amd64 requested on macOS without active Rosetta support
+    if args.amd64:
+        rosetta_status = check_macos_rosetta()
+        if rosetta_status is False:
+            print(
+                "\n⚠️  Warning: Podman machine does not have Rosetta active for amd64 emulation.",
+                file=sys.stderr,
+            )
+            print(
+                "   amd64 containers will fall back to QEMU emulation, which is significantly slower.",
+                file=sys.stderr,
+            )
+            print(
+                "   To enable Rosetta, configure ~/.config/containers/containers.conf on your Mac:",
+                file=sys.stderr,
+            )
+            print("     [machine]", file=sys.stderr)
+            print("     provider = \"applehv\"", file=sys.stderr)
+            print("     rosetta = true", file=sys.stderr)
+            print(
+                "   Or edit ~/.config/containers/podman/machine/applehv/<name>.json to set \"Rosetta\": true\n",
+                file=sys.stderr,
+            )
+
+    # Determine container image and verify existence for amd64
+    image_name = "pi-sandbox:amd64" if args.amd64 else "pi-sandbox"
+    if args.amd64 and not check_image_exists(image_name):
+        print(
+            f"Error: Container image '{image_name}' not found.",
+            file=sys.stderr,
+        )
+        print(
+            "Please run 'just build-amd64' from the pi-sandboxed-config repository first.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     # Read environment variables from global config .env file
     env_vars = parse_env_file()
 
     # Build container execution command
     existing_containers = get_existing_container_names()
-    default_name = f"pi-{project_path.name}"
+    base_name = f"pi-{project_path.name}"
+    if args.amd64:
+        base_name = f"{base_name}-amd64"
+    default_name = base_name
     requested_name = args.name or default_name
     container_name = resolve_container_name(requested_name, existing_containers)
 
@@ -329,6 +429,10 @@ Usage examples:
         "-e",
         f"PI_CONTAINER_NAME={container_name}",
     ]
+
+    # Target amd64 platform under emulation if requested
+    if args.amd64:
+        podman_cmd += ["--platform", "linux/amd64"]
 
     # Enable nested rootless Podman inside the sandbox if requested
     if args.nested_containers:
@@ -391,7 +495,7 @@ Usage examples:
         podman_cmd += ["-e", f"{key}={val}"]
 
     # Append image name
-    podman_cmd += ["pi-sandbox"]
+    podman_cmd += [image_name]
 
     # Append pi command arguments
     # Automatically add '--approve' so pi trusts our project workspace directory (/workspace) on boot
@@ -410,6 +514,8 @@ Usage examples:
     print("\n" + "=" * 60)
     print(f"Launching sandboxed Pi container: '{container_name}'")
     print(f"Workspace: {project_path}")
+    if args.amd64:
+        print("Architecture: amd64 (Rosetta/emulated)")
     if args.nested_containers:
         print("Nested containers: Enabled (/dev/fuse, unmasked /proc)")
     print(

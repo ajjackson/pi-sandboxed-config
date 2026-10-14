@@ -4,13 +4,21 @@
 default:
     @just --list
 
-# Build the Podman container image
+# Build the Podman container image (native architecture)
 build:
     podman build -t pi-sandbox -f Containerfile .
 
-# Build the Podman container image from the beginning
+# Build the Podman container image from the beginning (native architecture)
 build-fresh:
     podman build -t pi-sandbox -f Containerfile --no-cache .
+
+# Build the amd64 Podman container image (Rosetta-emulated on ARM Mac)
+build-amd64:
+    podman build --platform linux/amd64 -t pi-sandbox:amd64 -f Containerfile .
+
+# Build the amd64 Podman container image from the beginning
+build-amd64-fresh:
+    podman build --platform linux/amd64 -t pi-sandbox:amd64 --no-cache -f Containerfile .
 
 # Safely reclaim disk space by pruning dangling build layers and stopped pi-* containers
 prune:

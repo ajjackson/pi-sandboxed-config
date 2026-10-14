@@ -48,6 +48,26 @@ Ensure you have the following installed on your host system:
 * [Just](https://github.com/casey/just) (command runner)
 * Python 3
 
+#### Apple Silicon Mac Configuration (Recommended)
+Starting in Podman 5.6+, Podman on macOS defaults to the `libkrun` provider and disables Rosetta (`rosetta = false`). If you plan to build or run `amd64` containers under near-native emulation using Rosetta, configure Podman **before** initializing your machine:
+
+1. Ensure Rosetta 2 is installed on your Mac:
+   ```bash
+   softwareupdate --install-rosetta --agree-to-license
+   ```
+2. Create or edit `~/.config/containers/containers.conf`:
+   ```toml
+   [machine]
+   provider = "applehv"
+   rosetta = true
+   ```
+3. Initialize and start the machine:
+   ```bash
+   podman machine init
+   podman machine start
+   ```
+*(Note: Podman will now automatically configure the Apple Virtualization Framework with Rosetta directory sharing enabled).*
+
 ### 2. Setup Configuration
 Clone this repository to your machine, navigate to the folder, and install:
 
@@ -132,9 +152,10 @@ pi-launch -p ~/projects/my-new-task
 
 ### Options:
 * `-p`, `--project-dir`: The path to the writeable workspace. Defaults to the current working directory.
+* `-a`, `--amd64`: Launch using the amd64 container image (`pi-sandbox:amd64`) under Rosetta emulation on Apple Silicon.
 * `-r`, `--resume`: Direct first-class flag to resume a previous Pi session inside this workspace.
 * `-C`, `--nested-containers`, `--podman`: Enable nested rootless Podman inside the sandbox (mounts `/dev/fuse` and unmasks `/proc`) for running containerized unit tests.
-* `-n`, `--name`: Custom container name. Defaults to `pi-{project_name}`, auto-incrementing (`-2`, `-3`) if already running.
+* `-n`, `--name`: Custom container name. Defaults to `pi-{project_name}` (or `pi-{project_name}-amd64` when using `-a`), auto-incrementing (`-2`, `-3`) if already running.
 * `-i`, `--inspect`: Path to a read-only directory on the host to mount under `/inspect/<basename>` inside the sandbox (can be specified multiple times).
 * `-c`, `--gcp-creds`: Override path to Google Vertex credentials JSON.
 
@@ -148,6 +169,64 @@ pi-launch -p ~/projects/my-new-task
 ---
 
 ## Advanced Workflows
+
+### Running amd64 Containers on ARM Mac (Rosetta Emulation)
+When working with software or binary dependencies only available for x86-64 / amd64 on Apple Silicon Macs, you can build and run an amd64 container using Podman and Rosetta:
+
+1. **Build the amd64 container image**:
+   ```bash
+   just build-amd64
+   ```
+2. **Launch with the `-a` / `--amd64` flag**:
+   ```bash
+   pi-launch -a
+   # or in a specific directory:
+   pi-launch -a -p ~/projects/my-x86-work
+   ```
+   The container will automatically be named `pi-{project_name}-amd64` to prevent naming collisions with native ARM containers running against the same workspace.
+
+3. **Verifying and Troubleshooting Rosetta**:
+   Verify Rosetta is active on your Podman machine:
+   ```bash
+   # Check configuration (should return 'true')
+   podman machine inspect --format '{{.Rosetta}}'
+
+   # Verify active kernel binfmt registration inside the VM
+   podman machine ssh "test -f /proc/sys/fs/binfmt_misc/rosetta && echo 'Rosetta active' || echo 'Falling back to QEMU'"
+   ```
+
+   **Enabling Rosetta on an Existing Podman Machine**:
+   Whether you can enable Rosetta in-place without image loss depends on your existing machine's provider:
+
+   * **Case A: Existing machine was created with `applehv`** (e.g. via older Podman or `--provider applehv`):
+     You can enable Rosetta **in-place without losing images**. `podman machine start` dynamically checks `containers.conf` on boot and configures the hypervisor:
+     1. Add to `~/.config/containers/containers.conf`:
+        ```toml
+        [machine]
+        provider = "applehv"
+        rosetta = true
+        ```
+     2. Restart the machine:
+        ```bash
+        podman machine stop
+        podman machine start
+        ```
+     3. If `inspect` returns `true` but the kernel test still reports QEMU fallback, create the trigger file inside the VM and restart:
+        ```bash
+        podman machine ssh "sudo touch /etc/containers/enable-rosetta"
+        podman machine stop && podman machine start
+        ```
+
+   * **Case B: Existing machine was created with `libkrun`** (Podman 5.6+ / 6 default):
+     Podman cannot change an existing VM's hypervisor provider in-place. You must recreate the machine (note that this deletes any existing local images):
+     1. Add the `containers.conf` file as shown above. (Once set in `containers.conf`, no `--provider` CLI argument is needed on init).
+     2. Recreate the machine:
+        ```bash
+        podman machine stop
+        podman machine rm
+        podman machine init
+        podman machine start
+        ```
 
 ### Spawning a Root Shell to Install Dependencies
 By default, the agent runs as the standard non-root `pi` user, which prevents it from writing to system files. 
