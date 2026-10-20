@@ -72,9 +72,23 @@ description: Podman sandbox architecture, tmpfs copy-up behavior, user namespace
        [machine]
        provider = "applehv"
        rosetta = true
+       memory = 8192
+       cpus = 4
        ```
     2. Restart the machine: `podman machine stop && podman machine start`.
     3. If `inspect` returns `true` but the kernel test still reports QEMU fallback, run `podman machine ssh "sudo touch /etc/containers/enable-rosetta"` and restart again.
   * **If existing machine uses `libkrun` (Podman 5.6+/6 default)**:
     Provider cannot be changed in-place. Create the `containers.conf` file as above, then recreate the machine (this deletes local container images):
     `podman machine stop && podman machine rm && podman machine init && podman machine start`. (No CLI flags needed on init once `containers.conf` is configured).
+
+### 8. Out of Memory (OOM) / Process Killed During Builds or Dependency Resolution
+* **Cause**: Podman machines on macOS default to only 2048 MB (2.0 GiB) of RAM and no swap. Concurrently resolving or downloading large packages (e.g., PyTorch/CUDA wheels via `uv`) or compiling packages causes the Linux kernel inside the VM to OOM-kill processes.
+* **Fix for Existing Machine (In-Place, No Image Loss)**:
+  Run from the host macOS terminal:
+  ```bash
+  podman machine stop
+  podman machine set --memory 8192 --cpus 4
+  podman machine start
+  ```
+* **Persistent Default for New Machines**:
+  Set `memory = 8192` (in MiB) and `cpus = 4` under `[machine]` in `~/.config/containers/containers.conf`.

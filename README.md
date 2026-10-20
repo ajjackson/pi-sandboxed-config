@@ -60,6 +60,8 @@ Starting in Podman 5.6+, Podman on macOS defaults to the `libkrun` provider and 
    [machine]
    provider = "applehv"
    rosetta = true
+   memory = 8192      # In MiB (8 GB; default 2048 MB is insufficient for heavy builds/uv)
+   cpus = 4           # Recommended: 4 vCPUs
    ```
 3. Initialize and start the machine:
    ```bash
@@ -205,6 +207,8 @@ When working with software or binary dependencies only available for x86-64 / am
         [machine]
         provider = "applehv"
         rosetta = true
+        memory = 8192
+        cpus = 4
         ```
      2. Restart the machine:
         ```bash
