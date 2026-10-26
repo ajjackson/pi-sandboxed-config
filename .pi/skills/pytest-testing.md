@@ -16,6 +16,10 @@ Identify test configurations and files by looking for:
 
 ## Best Practices for Test Writing
 * **Re-use Existing Project Fixtures**: Always use project-provided fixtures (e.g., `rng` from `conftest.py`) rather than instantiating local random number generators (`Generator(PCG64(...))`) or custom setup boilerplate.
+* **Durable Tests vs. Disposable Verification**:
+  - Tests in the test suite must exercise the system under test, not the test harness.
+  - Do not write permanent unit tests for test helpers, loaders, or static fixtures unless they contain complex domain algorithms. Verify test tooling by running the existing test suite.
+  - Use standard pytest flags (`pytest --runxfail`, `strict=True`) instead of custom environment flags or mock runners.
 
 ## Activation Scenarios
 Run Pytest:
