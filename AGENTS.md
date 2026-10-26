@@ -10,9 +10,9 @@ This file contains critical context about your runtime environment, persistence 
 ### 1. Storage & Persistence (`/workspace` vs. `/home/pi`)
 * **`/workspace` (Persistent)**: This is a persistent volume mount mapped directly to the host's project directory. All files created, modified, or deleted here survive container restarts, session resumes, and host reboots.
 * **`/home/pi` (Transient `tmpfs`)**: This directory is mounted as a transient in-memory filesystem (`--tmpfs /home/pi:U`). 
-  * *Trap*: Any files or packages written to `/home/pi` (such as global npm packages via `npm install -g`, updates to `.bashrc`, `.profile`, or files under `/home/pi/.npm-global`) **are temporary and will be completely lost** when the container stops/exits.
+  * *Warning*: Any files or packages written to `/home/pi` (such as global npm packages via `npm install -g`, updates to `.bashrc`, `.profile`, or files under `/home/pi/.npm-global`) **are temporary and will be completely lost** when the container stops/exits.
   * *Extension Workaround*: If you need to install persistent extension dependencies, install them locally in the persistent workspace directory (e.g., run `run npm install` inside `/workspace/.pi/extensions/` to create a local `node_modules` directory).
-  * *Python/Conda Trap*: Global python installations via standard `pip install` are disabled/blocked under PEP 668 and would be lost on reset anyway. **Always use the pre-installed `uv` or `pixi`** to manage virtualized, local, and persistent dependencies inside `/workspace` (e.g., run `uv venv` or `pixi init`).
+  * *Python*: There is no system `python`, `python3`, or `pip` on `PATH`. **Always use the pre-installed `uv` or `pixi`**, which manage local, persistent environments inside `/workspace` (e.g., run `uv venv` or `pixi init`). Run all scripts, including one-off inline heredocs, with `uv run python ...` (or `uv run --with <pkg> python ...` for ad-hoc dependencies). If a bare `python3` command fails with "command not found", retry with `uv run python` instead of switching approach.
 
 ### 2. GCP / Google Vertex AI Environment & Auth
 * **Pre-Authenticated**: You do not need to run `gcloud auth login` or set up Google Cloud SDK auth credentials. 

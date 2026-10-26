@@ -18,8 +18,10 @@ Identify test configurations and files by looking for:
 * **Re-use Existing Project Fixtures**: Always use project-provided fixtures (e.g., `rng` from `conftest.py`) rather than instantiating local random number generators (`Generator(PCG64(...))`) or custom setup boilerplate.
 * **Durable Tests vs. Disposable Verification**:
   - Tests in the test suite must exercise the system under test, not the test harness.
-  - Do not write permanent unit tests for test helpers, loaders, or static fixtures unless they contain complex domain algorithms. Verify test tooling by running the existing test suite.
+  - Do not add new `test_*` functions or files whose subject is test data, loaders, helpers, or static fixtures, unless they contain complex domain algorithms. Verify test tooling by running the existing test suite. Sanity-check `assert`s inside loaders and fixtures are fine.
   - Use standard pytest flags (`pytest --runxfail`, `strict=True`) instead of custom environment flags or mock runners.
+* **Guard Against Silent Zero-Collection**: Projects using parametrisation SHOULD set `empty_parameter_set_mark = "fail_at_collect"` in `[tool.pytest.ini_options]`, so an empty data loader fails collection instead of silently skipping. Treat this as baseline configuration: do not add tests to verify it, and do not change it as part of a feature change. If a loader needs a stronger check (e.g. a minimum file count), put an `assert` in the loader itself, not in a new test function.
+* **Verifying Test Refactors**: Compare `uv run pytest --collect-only -q` output (node IDs) before and after the refactor. This is a disposable check; do not commit it.
 
 ## Activation Scenarios
 Run Pytest:
