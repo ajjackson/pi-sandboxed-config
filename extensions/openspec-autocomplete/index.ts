@@ -69,9 +69,12 @@ export function getActiveChanges(cwd: string): string[] {
  * Check if the text before cursor matches an OpenSpec prompt template or --change flag.
  */
 export function matchOpenSpecTrigger(textBeforeCursor: string): OpenSpecTrigger | null {
-  // Matches /opsx or /opsx-<subcommand> followed by whitespace and an optional argument
-  // e.g. "/opsx ", "/opsx-apply ", "/opsx-archive 1-", "/opsx-sync \"1-"
-  const opsxMatch = textBeforeCursor.match(/^\/opsx(?:-[\w-]+)?\s+("[^"]*|'[^']*|[^\s]*)$/);
+  // Matches OpenSpec commands (/openspec-*, /skill:openspec-*, or legacy /opsx-*) followed by whitespace and an optional argument
+  // e.g. "/openspec-propose ", "/skill:openspec-apply-change \"1-", or legacy "/opsx-apply "
+  // TODO(openspec-v1-cleanup): Remove legacy /opsx prefix matching once v1 projects are retired.
+  const opsxMatch = textBeforeCursor.match(
+    /^\/(?:openspec|skill:openspec|opsx)(?:-[\w-]+)?\s+("[^"]*|'[^']*|[^\s]*)$/
+  );
   if (opsxMatch) {
     const raw = opsxMatch[1] ?? "";
     const isQuoted = raw.startsWith('"') || raw.startsWith("'");

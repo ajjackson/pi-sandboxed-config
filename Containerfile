@@ -69,7 +69,7 @@ WORKDIR /home/pi
 
 # Install pi-coding-agent and plugins globally in userspace (as user 'pi') during build time
 RUN mkdir -p /home/pi/.npm-global/lib /home/pi/.pi/agent/pi-blackhole \
- && npm install -g @earendil-works/pi-coding-agent @twogiants/pi-anthropic-vertex @fission-ai/openspec pi-openspec-status pi-web-access pi-blackhole \
+ && npm install -g @earendil-works/pi-coding-agent @twogiants/pi-anthropic-vertex @fission-ai/openspec@^2 pi-openspec-status pi-web-access pi-blackhole \
  && rm -rf /home/pi/.npm \
  && ARCH=$(uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/') \
  && for d in $(find /home/pi/.npm-global/lib/node_modules -type d -name "@esbuild"); do \
@@ -86,14 +86,23 @@ RUN mkdir -p /home/pi/.npm-global/lib /home/pi/.pi/agent/pi-blackhole \
 RUN echo '{"compaction":"manual","compactionEngine":"blackhole","memory":true,"sessionFallback":true,"model":{"provider":"google-vertex","id":"gemini-3.8-flash","thinking":"low"},"observerModel":{"provider":"google-vertex","id":"gemini-3.5-flash-lite","thinking":"off"},"observerFallbackModels":[{"provider":"google-vertex","id":"gemini-3.8-flash","thinking":"off"},{"provider":"google-vertex","id":"gemini-3.7-flash","thinking":"off"},{"provider":"google-vertex","id":"gemini-2.5-flash-lite","thinking":"off"}],"reflectorModel":{"provider":"google-vertex","id":"gemini-3.8-flash","thinking":"low"},"reflectorFallbackModels":[{"provider":"google-vertex","id":"gemini-3.5-flash","thinking":"low"},{"provider":"google-vertex","id":"gemini-2.5-flash","thinking":"off"}],"dropperModel":{"provider":"google-vertex","id":"gemini-3.5-flash-lite","thinking":"off"},"dropperFallbackModels":[{"provider":"google-vertex","id":"gemini-3.8-flash","thinking":"off"},{"provider":"google-vertex","id":"gemini-3.7-flash","thinking":"off"},{"provider":"google-vertex","id":"gemini-2.5-flash-lite","thinking":"off"}]}' > /home/pi/.pi/agent/pi-blackhole/pi-blackhole-config.json
 
 # Initialize OpenSpec global agent skills and prompts for pi inside ~/.pi/agent/
-# Uses an isolated temporary directory to extract only openspec-* skills and opsx-*.md prompts
+# OpenSpec 2.0+ installs skills into .agents/skills/
+# TODO(openspec-v1-cleanup): Remove .pi/skills and .pi/prompts fallbacks once legacy v1 projects are retired
 RUN TMP_DIR=$(mktemp -d) && \
     ( \
       cd "$TMP_DIR" && \
       openspec init --tools pi && \
       mkdir -p /home/pi/.pi/agent/skills /home/pi/.pi/agent/prompts && \
-      cp -r .pi/skills/openspec-* /home/pi/.pi/agent/skills/ && \
-      cp -r .pi/prompts/opsx-*.md /home/pi/.pi/agent/prompts/ \
+      if [ -d .agents/skills ]; then \
+        cp -r .agents/skills/openspec-* /home/pi/.pi/agent/skills/; \
+      elif [ -d .pi/skills ]; then \
+        # Deprecated: OpenSpec v1 compatibility
+        cp -r .pi/skills/openspec-* /home/pi/.pi/agent/skills/; \
+      fi && \
+      if [ -d .pi/prompts ]; then \
+        # Deprecated: OpenSpec v1 compatibility
+        cp -r .pi/prompts/opsx-*.md /home/pi/.pi/agent/prompts/ 2>/dev/null || true; \
+      fi \
     ) && \
     rm -rf "$TMP_DIR"
 
